@@ -69,14 +69,29 @@ tool with an M3 screw — print `hardware/pencil-grip/braccio_pencil_grip_8mm.st
 ## Quick start (dry run, no arm)
 
 Prove the pipeline end-to-end without moving the arm — it reads a photo,
-produces the toolpath preview, and writes a branded gallery card:
+produces the toolpath preview, and writes a branded gallery card.
+
+The Arduino UNO Q (Debian) ships an *externally managed* Python (PEP 668) and
+only provides `python3`, so install into a virtualenv (the `setup` helper does
+this for you):
 
 ```bash
-pip install -r requirements.txt
-python -m sketch_artist.cli --image examples/sample_face.jpg --dry-run
-open output/preview.png            # toolpath the arm would draw
-open output/gallery/*.png          # branded postcard
+./scripts/run_demo.sh setup        # creates .venv and installs requirements
+./scripts/run_demo.sh dry          # dry-run from examples/sample_face.jpg
+xdg-open output/preview.png        # toolpath the arm would draw
+xdg-open output/gallery/*.png      # branded postcard
 ```
+
+Equivalently, by hand:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python -m sketch_artist.cli --image examples/sample_face.jpg --dry-run
+```
+
+> Don't run `pip install -r requirements.txt` against the system Python — it
+> fails with `externally-managed-environment`. Use the venv above (or Docker).
 
 ## Run the full demo
 
@@ -84,15 +99,15 @@ open output/gallery/*.png          # branded postcard
 # 1. Start the arm agent on the UNO Q (braccio_remote_agent) -> :8765
 # 2. Print assets/edge_impulse_paper_template.svg and tape it in the paper box
 # 3. Calibrate the paper with the gripper camera:
-python -m sketch_artist.calibration --save config/homography.json
+.venv/bin/python -m sketch_artist.calibration --save config/homography.json
 # 4. Run: capture a visitor, draw them, publish to the gallery:
-python -m sketch_artist.cli
+.venv/bin/python -m sketch_artist.cli
 ```
 
 Start the branded live gallery on its own (port `7100`):
 
 ```bash
-python -m web.server            # http://<uno-q>:7100
+./scripts/run_demo.sh gallery       # http://<uno-q>:7100
 ```
 
 Or bring the whole thing up with Docker (cameras + arm reach + gallery):
