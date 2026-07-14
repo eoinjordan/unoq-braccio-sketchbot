@@ -14,10 +14,12 @@ enabling motion.
 
 ## Pen holder
 
-- Use the spring-loaded holder in `hardware/pen-holder/`. The compliance means a
-  Z error pushes the spring instead of driving the tool into the paper or
-  snapping a pencil lead.
-- Set `pen.down_z_mm` so the spring is only lightly preloaded on contact.
+- Use the printed grip in `hardware/pencil-grip/`. It bolts on in place of a
+  Braccio finger and clamps the tool with an M3 screw, so the pen can't slip
+  mid-drawing.
+- It is **rigid** (no Z compliance), so tune `pen.down_z_mm` carefully and keep
+  downward force light — too low and the pen digs in or snaps a lead. Add a
+  spring-loaded Z stage between the wrist and grip if your table isn't flat.
 
 ## Software guards
 

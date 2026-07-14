@@ -41,11 +41,16 @@ Sketchbot wall.
 | Face camera     | Razer Kiyo                          | `1532:0e03`  |
 | Gripper camera  | Solid Year SW72011                  | `060b:8038`  |
 | Arm             | Arduino UNO Q + TinkerKit Braccio   | —            |
-| Pen             | A pencil clamped in the gripper     | —            |
+| Pen             | 3D-printed drawing grip (see `hardware/pencil-grip/`) | —   |
 
 Cameras are resolved by **USB vendor:product ID**, not by `/dev/videoN`
 (which is unstable across reboots). Update `config/cameras.yaml` if you swap
 cameras.
+
+The pencil is held by a printed **replacement Braccio finger** that clamps the
+tool with an M3 screw — print `hardware/pencil-grip/braccio_pencil_grip_8mm.stl`
+(pencils) or `_10mm.stl` (pens/markers). See
+[hardware/pencil-grip/README.md](hardware/pencil-grip/README.md).
 
 ## Prerequisites
 
@@ -133,6 +138,7 @@ sketch_artist/     Vision + planning + kinematics + arm client (the pipeline)
 web/               Branded live gallery web server + static assets
 config/            Camera, workspace, drawing and branding configuration
 assets/            Edge Impulse postcard template + logo/QR slots
+hardware/          3D-printable Braccio pencil grip (STL/OBJ/SCAD)
 scripts/           Camera listing and demo runner helpers
 docs/              Architecture, calibration and safety notes
 examples/          A sample face image for dry runs
@@ -141,3 +147,7 @@ examples/          A sample face image for dry runs
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+The 3D-printable files in `hardware/pencil-grip/` are **CC BY-SA 4.0**
+(by *eoinedge*, [Thingiverse thing:7382987](https://www.thingiverse.com/thing:7382987));
+see [hardware/pencil-grip/LICENSE](hardware/pencil-grip/LICENSE).

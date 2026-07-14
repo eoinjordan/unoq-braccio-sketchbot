@@ -29,8 +29,8 @@ with `offset + sign * geometric` (`workspace.yaml` → `servo_calibration`).
 2. Set `offset`/`sign` per joint.
 3. Run `python -m sketch_artist.cli --dry-run` and inspect `output/preview.png`.
 4. Run `--slow` and watch the first strokes; adjust `pen.down_z_mm` /
-   `pen.up_z_mm` until the pen touches with light, even pressure. The
-   spring-loaded pen holder absorbs small errors.
+   `pen.up_z_mm` until the pen touches with light, even pressure. The printed
+   grip is rigid, so go slowly — a small Z error shows up directly as pressure.
 
 ## 4. Paper homography (gripper camera)
 

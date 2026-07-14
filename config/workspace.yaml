@@ -12,7 +12,8 @@ links:
   shoulder_mm: 125
   # Elbow axis -> wrist axis.
   elbow_mm: 125
-  # Wrist axis -> pencil tip (gripper + clamped pencil). Tune this to your pen.
+  # Wrist axis -> pencil tip, with the printed grip (hardware/pencil-grip)
+  # mounted and the pencil protruding ~25-40 mm. Tune to your build.
   wrist_pen_mm: 95
 
 # Paper drawing area, described in the arm base frame:
@@ -27,7 +28,8 @@ paper:
 pen:
   down_z_mm: 2             # pencil tip height while drawing (touching paper)
   up_z_mm: 25              # travel height for pen-up moves between strokes
-  down_gripper: 90         # gripper angle that clamps the pencil (0..110)
+  down_gripper: 90         # neutral finger angle; the printed grip clamps the
+                           # pencil with a screw, so this doesn't hold the tool
 
 # Servo-angle calibration. Geometric IK angles are converted to servo degrees
 # with: servo = clamp(offset + sign * geometric, 0, 180).
