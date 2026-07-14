@@ -37,7 +37,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
+    def do_HEAD(self):
+        # Same routing as GET; _send omits the body for HEAD requests.
+        self.do_GET()
 
     def do_GET(self):
         path = self.path.split("?", 1)[0]
