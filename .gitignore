@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env
+
+# Generated output (sketches, previews, gallery cards)
+output/
+config/homography.json
+
+# Brand assets that shouldn't be committed (drop your own locally)
+assets/edge_impulse_logo.png
+assets/qr.png
+
+# OS / editor
+.DS_Store
+.vscode/

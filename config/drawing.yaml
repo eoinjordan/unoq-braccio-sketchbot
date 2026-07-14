@@ -1,0 +1,29 @@
+# Portrait -> line-art -> strokes tuning.
+
+capture:
+  target_px: 512           # working square canvas the pipeline operates on
+
+portrait:
+  detect_face: true        # crop to the largest detected face
+  crop_margin: 0.35        # padding around the face box (fraction of box size)
+  # Haar cascade shipped with OpenCV; leave blank to auto-locate.
+  face_cascade: ""
+
+edges:
+  method: canny            # "canny" or "dog" (difference of gaussians)
+  bilateral_d: 7           # edge-preserving smoothing before edges
+  bilateral_sigma: 75
+  canny_low: 60
+  canny_high: 160
+  dog_sigma1: 1.0          # only used when method == "dog"
+  dog_sigma2: 2.4
+
+vectorize:
+  min_contour_len_px: 12   # drop specks shorter than this
+  simplify_epsilon_px: 1.5 # Douglas-Peucker tolerance (higher = fewer points)
+  max_strokes: 400         # cap total strokes to keep drawing time sane
+  max_points_per_stroke: 120
+
+style:
+  # Optional caricature emphasis: thicken/keep only the strongest edges.
+  keep_longest_fraction: 1.0   # 1.0 = keep all; <1 keeps only longest strokes

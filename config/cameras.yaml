@@ -1,0 +1,16 @@
+# Cameras are resolved by USB vendor:product ID so the roles stay stable even
+# when /dev/videoN numbering changes across reboots. Find IDs with `lsusb`.
+cameras:
+  face:
+    description: "Person-facing camera used to capture the portrait"
+    usb_id: "1532:0e03"      # Razer USA, Ltd Gaming Webcam [Kiyo]
+    width: 1280
+    height: 720
+    warmup_frames: 8         # frames to discard so exposure/white-balance settle
+
+  gripper:
+    description: "Gripper-mounted camera viewing the paper while drawing"
+    usb_id: "060b:8038"      # Solid Year SW72011
+    width: 640
+    height: 480
+    warmup_frames: 4

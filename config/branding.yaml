@@ -1,0 +1,38 @@
+# Edge Impulse branding for the printed postcard and the live web gallery.
+# Adjust the hex values to the official Edge Impulse brand palette if needed.
+
+brand:
+  name: "Edge Impulse"
+  title: "Sketchbot"
+  tagline: "Drawn live by an Arduino UNO Q + Braccio"
+  cta: "Build your own at edgeimpulse.com"
+  primary_hex: "#3B47CE"   # Edge Impulse accent (indigo/blue)
+  accent_hex: "#00E5A0"    # secondary accent (teal/green)
+  ink_hex: "#0B1221"       # near-black drawing ink
+  bg_hex: "#FFFFFF"
+  # Drop the official assets here locally (they are git-ignored):
+  logo_path: "assets/edge_impulse_logo.png"
+  qr_path: "assets/qr.png"
+  qr_url: "https://edgeimpulse.com"
+
+# Postcard layout in pixels (the branded card the gallery renders and that the
+# printed template mirrors). The drawing box must have the same aspect ratio as
+# paper.width_mm : paper.height_mm in workspace.yaml so preview == physical.
+postcard:
+  width_px: 1050           # ~A6 @ ~180 dpi
+  height_px: 1480
+  bg_hex: "#FFFFFF"
+  drawing_box:
+    x: 90
+    y: 250
+    w: 870
+    h: 870                 # square box (matches 150x150 mm paper)
+  header_height_px: 210
+  footer_height_px: 150
+
+gallery:
+  title: "Sketchbot Live Gallery"
+  columns: 4
+  max_items: 24
+  poll_seconds: 3
+  output_dir: "output/gallery"

@@ -1,0 +1,33 @@
+services:
+  # Live branded gallery web page (http://<uno-q>:7100).
+  gallery:
+    build: .
+    container_name: sketchbot_gallery
+    # Host networking so the page is reachable on the UNO Q's LAN IP and so the
+    # pipeline container can reach the arm agent on 127.0.0.1:8765.
+    network_mode: host
+    volumes:
+      # Share generated cards so the gallery sees what the pipeline produces.
+      - ./output:/app/output
+      - ./config:/app/config:ro
+    command: ["python", "-m", "web.server"]
+    restart: unless-stopped
+
+  # The capture -> draw pipeline. Runs on demand:
+  #   docker compose run --rm sketchbot                 # capture + draw
+  #   docker compose run --rm sketchbot python -m sketch_artist.cli --dry-run
+  sketchbot:
+    build: .
+    container_name: sketchbot_pipeline
+    network_mode: host          # reach the arm agent on 127.0.0.1:8765
+    privileged: true            # simplest reliable /dev/video* access
+    volumes:
+      - ./output:/app/output
+      - ./config:/app/config:ro
+      - ./examples:/app/examples:ro
+    # Cameras: privileged already exposes /dev/video*. If you prefer explicit
+    # passthrough, list them here instead of privileged:
+    # devices:
+    #   - /dev/video0:/dev/video0
+    #   - /dev/video2:/dev/video2
+    command: ["python", "-m", "sketch_artist.cli"]

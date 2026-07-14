@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sketchbot Live Gallery</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header id="masthead">
+    <div class="brand">
+      <span class="brand-name" id="brandName">Edge Impulse</span>
+      <span class="brand-title" id="brandTitle">Sketchbot</span>
+    </div>
+    <p class="tagline" id="tagline">Drawn live by an Arduino UNO Q + Braccio</p>
+  </header>
+
+  <main>
+    <h1 id="galleryTitle">Live Gallery</h1>
+    <section id="grid" class="grid" aria-live="polite"></section>
+    <p id="empty" class="empty">Waiting for the first sketch…</p>
+  </main>
+
+  <footer>
+    <span id="count">0 sketches</span>
+    <span>Build your own at edgeimpulse.com</span>
+  </footer>
+
+  <script>
+    const grid = document.getElementById("grid");
+    const empty = document.getElementById("empty");
+    const countEl = document.getElementById("count");
+    let pollMs = 3000;
+    let known = new Set();
+
+    function applyBrand(b, g) {
+      if (!b) return;
+      document.getElementById("brandName").textContent = b.name || "Edge Impulse";
+      document.getElementById("brandTitle").textContent = b.title || "Sketchbot";
+      document.getElementById("tagline").textContent = b.tagline || "";
+      document.getElementById("galleryTitle").textContent = g.title || "Live Gallery";
+      if (b.primary_hex) {
+        document.documentElement.style.setProperty("--primary", b.primary_hex);
+      }
+      if (b.accent_hex) {
+        document.documentElement.style.setProperty("--accent", b.accent_hex);
+      }
+      if (g.columns) {
+        grid.style.gridTemplateColumns = `repeat(${g.columns}, 1fr)`;
+      }
+      if (g.poll_seconds) pollMs = g.poll_seconds * 1000;
+    }
+
+    function render(items) {
+      countEl.textContent = `${items.length} sketch${items.length === 1 ? "" : "es"}`;
+      empty.style.display = items.length ? "none" : "block";
+      // Newest first; prepend any new items.
+      for (const item of items.slice().reverse()) {
+        if (known.has(item.file)) continue;
+        known.add(item.file);
+        const fig = document.createElement("figure");
+        fig.className = "card new";
+        const img = document.createElement("img");
+        img.src = `/gallery/${encodeURIComponent(item.file)}`;
+        img.alt = item.title || "sketch";
+        const cap = document.createElement("figcaption");
+        cap.textContent = item.title || "Visitor";
+        fig.appendChild(img);
+        fig.appendChild(cap);
+        grid.prepend(fig);
+      }
+    }
+
+    async function tick() {
+      try {
+        const res = await fetch("/gallery.json", { cache: "no-store" });
+        const data = await res.json();
+        applyBrand(data.brand, data.gallery || {});
+        render(data.items || []);
+      } catch (e) {
+        /* keep polling */
+      } finally {
+        setTimeout(tick, pollMs);
+      }
+    }
+    tick();
+  </script>
+</body>
+</html>

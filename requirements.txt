@@ -1,0 +1,7 @@
+# Core vision + numerics
+numpy<2
+opencv-python-headless>=4.8
+# Branded gallery card compositing (text, logo, QR overlay)
+Pillow>=10.0
+# Config files
+PyYAML>=6.0

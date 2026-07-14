@@ -1,0 +1,44 @@
+# Physical geometry of the arm and the drawing surface.
+# ALL distances in millimetres, angles in degrees.
+#
+# Measure YOUR arm and paper placement and update these values. The defaults
+# are nominal TinkerKit Braccio dimensions and a paper placed in front of the
+# base; they will not be accurate until calibrated (see docs/calibration.md).
+
+links:
+  # Height from the table to the shoulder rotation axis.
+  base_height_mm: 72
+  # Shoulder axis -> elbow axis.
+  shoulder_mm: 125
+  # Elbow axis -> wrist axis.
+  elbow_mm: 125
+  # Wrist axis -> pencil tip (gripper + clamped pencil). Tune this to your pen.
+  wrist_pen_mm: 95
+
+# Paper drawing area, described in the arm base frame:
+#   origin = the near-left corner of the drawing box,
+#   +x points away from the base, +y points to the arm's left.
+paper:
+  origin_x_mm: 150
+  origin_y_mm: -75
+  width_mm: 150            # drawing box size along +x
+  height_mm: 150           # drawing box size along +y
+
+pen:
+  down_z_mm: 2             # pencil tip height while drawing (touching paper)
+  up_z_mm: 25              # travel height for pen-up moves between strokes
+  down_gripper: 90         # gripper angle that clamps the pencil (0..110)
+
+# Servo-angle calibration. Geometric IK angles are converted to servo degrees
+# with: servo = clamp(offset + sign * geometric, 0, 180).
+# Tune each offset/sign to YOUR servo zero positions with --dry-run first.
+servo_calibration:
+  base:            { offset: 90,  sign: 1 }
+  shoulder:        { offset: 90,  sign: 1 }
+  elbow:           { offset: 90,  sign: 1 }
+  wrist_vertical:  { offset: 90,  sign: 1 }
+  wrist_rotation:  { fixed: 90 }
+
+motion:
+  settle_s: 0.15           # pause after each pen-down point
+  pen_change_s: 0.4        # pause on pen up/down transitions
