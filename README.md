@@ -76,11 +76,18 @@ only provides `python3`, so install into a virtualenv (the `setup` helper does
 this for you):
 
 ```bash
+# One-time: Debian splits venv/pip into separate packages
+sudo apt update && sudo apt install -y python3-venv python3-pip
+
 ./scripts/run_demo.sh setup        # creates .venv and installs requirements
 ./scripts/run_demo.sh dry          # dry-run from examples/sample_face.jpg
 xdg-open output/preview.png        # toolpath the arm would draw
 xdg-open output/gallery/*.png      # branded postcard
 ```
+
+If `setup` reports the `ensurepip` / `python3-venv` error, run the `apt install`
+line above (it prints the exact command for your Python version) and re-run
+`setup`.
 
 Equivalently, by hand:
 
@@ -91,7 +98,8 @@ python3 -m venv .venv
 ```
 
 > Don't run `pip install -r requirements.txt` against the system Python — it
-> fails with `externally-managed-environment`. Use the venv above (or Docker).
+> fails with `externally-managed-environment`. Use the venv above, or skip
+> Python setup entirely with Docker (`docker compose up -d --build`).
 
 ## Run the full demo
 
