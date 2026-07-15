@@ -6,6 +6,14 @@ UNO Q** takes a photo of a visitor, turns it into a line-art caricature, and
 sketches appear on a branded **live web gallery**, exactly like a trade-show
 Sketchbot wall.
 
+<img width="1575" height="803" alt="image" src="https://github.com/user-attachments/assets/9333462d-fc6e-4a82-adbd-92492d693beb" />
+
+
+
+
+<img width="1800" height="1822" alt="image" src="https://github.com/user-attachments/assets/0460f688-38cf-4082-8923-3eaf0989cadf" />
+
+
 ```
  Razer Kiyo (face cam) ──► portrait ──► vectorize ──► plan strokes ──► IK ──► Braccio pencil
                                                                         │
