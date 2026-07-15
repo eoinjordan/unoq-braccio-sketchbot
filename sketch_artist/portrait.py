@@ -12,8 +12,26 @@ import numpy as np
 def _find_face_cascade(explicit: str = "") -> Optional[str]:
     if explicit:
         return explicit if os.path.exists(explicit) else None
-    candidate = os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
-    return candidate if os.path.exists(candidate) else None
+
+    name = "haarcascade_frontalface_default.xml"
+    candidates = []
+    # pip opencv-python* bundle the cascades and expose cv2.data.haarcascades;
+    # Debian's python3-opencv does not, so also probe the system data dirs.
+    data = getattr(cv2, "data", None)
+    if data is not None and getattr(data, "haarcascades", None):
+        candidates.append(os.path.join(data.haarcascades, name))
+    candidates += [
+        os.path.join(p, name)
+        for p in (
+            "/usr/share/opencv4/haarcascades",
+            "/usr/share/opencv/haarcascades",
+            "/usr/local/share/opencv4/haarcascades",
+        )
+    ]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    return None
 
 
 def crop_to_face(

@@ -32,7 +32,7 @@ case "${1:-dry}" in
       echo "Installing Debian prebuilt native deps (no source compile)..."
       sudo apt-get update
       sudo apt-get install -y python3-venv python3-pip \
-        python3-numpy python3-opencv python3-pil python3-yaml || \
+        python3-numpy python3-opencv opencv-data python3-pil python3-yaml || \
         echo "apt install failed; will fall back to pip wheels." >&2
     fi
     rm -rf "$VENV"
