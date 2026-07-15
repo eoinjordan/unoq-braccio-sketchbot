@@ -32,6 +32,7 @@ def load_all() -> Dict[str, Any]:
         "workspace": load_yaml("workspace.yaml"),
         "drawing": load_yaml("drawing.yaml"),
         "branding": load_yaml("branding.yaml"),
+        "scenes": load_yaml("scenes.yaml"),
     }
 
 

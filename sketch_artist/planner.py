@@ -44,7 +44,9 @@ def _fit_transform(strokes: List[Stroke], paper: dict) -> Tuple[float, float, fl
 def _to_mm(pt: Point, scale: float, off_x: float, off_y: float,
            src_min_x: float, src_min_y: float, paper: dict) -> Point:
     x, y = pt
-    # Pixel +y is down; flip so paper +y goes to the arm's left / up the page.
+    # Map pixel coords into paper millimetres. Both axes are mapped without
+    # flipping; the arm coordinate frame is configured via workspace.yaml
+    # (paper origin_x/y and servo_calibration signs).
     mm_x = float(paper["origin_x_mm"]) + off_x + (x - src_min_x) * scale
     mm_y = float(paper["origin_y_mm"]) + off_y + (y - src_min_y) * scale
     return mm_x, mm_y
@@ -81,18 +83,25 @@ def plan(strokes: List[Stroke], workspace_cfg: dict) -> List[Move]:
     if not strokes:
         return []
 
+    join_gap_mm = float(workspace_cfg.get("planner", {}).get("join_gap_mm", 0.0))
     scale, off_x, off_y, src_min_x, src_min_y = _fit_transform(strokes, paper)
     ordered = _order_strokes(strokes)
 
     moves: List[Move] = []
+    prev_end: Point | None = None
     for stroke in ordered:
         first = _to_mm(stroke[0], scale, off_x, off_y, src_min_x, src_min_y, paper)
-        # Pen-up move to the start of the stroke, then pen down.
-        moves.append(Move(first[0], first[1], pen_down=False))
-        moves.append(Move(first[0], first[1], pen_down=True))
+        if prev_end is not None and _dist(prev_end, first) <= join_gap_mm:
+            # Close enough: keep the pen down and draw through the gap.
+            moves.append(Move(first[0], first[1], pen_down=True))
+        else:
+            # Pen-up travel to the start of the stroke, then pen down.
+            moves.append(Move(first[0], first[1], pen_down=False))
+            moves.append(Move(first[0], first[1], pen_down=True))
         for pt in stroke[1:]:
             mm = _to_mm(pt, scale, off_x, off_y, src_min_x, src_min_y, paper)
             moves.append(Move(mm[0], mm[1], pen_down=True))
+        prev_end = _to_mm(stroke[-1], scale, off_x, off_y, src_min_x, src_min_y, paper)
     # Lift at the end.
     if moves:
         last = moves[-1]

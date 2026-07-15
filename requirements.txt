@@ -1,5 +1,11 @@
 # Core vision + numerics
-numpy<2
+#
+# NOTE for the UNO Q (Debian arm64, Python 3.13): there is no prebuilt wheel for
+# numpy < 2 on cp313, so pinning `numpy<2` forces a slow source compile. We keep
+# the floor at a modern release and let a numpy 2.x wheel install; the code is
+# numpy-2 clean. On the device, `scripts/run_demo.sh setup` prefers Debian's
+# python3-numpy / python3-opencv (prebuilt) so nothing has to compile at all.
+numpy>=1.24
 opencv-python-headless>=4.8
 # Branded gallery card compositing (text, logo, QR overlay)
 Pillow>=10.0

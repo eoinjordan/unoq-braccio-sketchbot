@@ -6,6 +6,9 @@ Examples:
     python -m sketch_artist.cli                 # full demo (captures + draws)
     python -m sketch_artist.cli --no-arm        # capture + gallery, no motion
     python -m sketch_artist.cli --slow          # slower, safer arm moves
+    python -m sketch_artist.cli --dry-run --debug  # inspect the face crop
+    python -m sketch_artist.cli --list-styles      # list caricature scenes
+    python -m sketch_artist.cli --style engineer   # face into a scene template
 """
 
 from __future__ import annotations
@@ -21,8 +24,9 @@ from .arm_client import ArmClient
 from .gallery import publish, render_postcard
 from .kinematics import BraccioKinematics, UnreachableError
 from .planner import Move, move_count, plan
-from .portrait import to_line_art
+from .portrait import crop_to_face, to_line_art
 from .preview import render_png, render_svg
+from .scenes import (available_styles, compose, resolve_style)
 from .vectorize import strokes_from_edges
 
 
@@ -76,12 +80,33 @@ def run(args) -> int:
         frame = _capture_face(conf)
 
     # 2. Portrait -> line art.
+    if args.debug:
+        cv2.imwrite(str(Path(out_dir) / "debug_capture.png"), frame)
+        portrait_cfg = conf["drawing"].get("portrait", {})
+        crop, found = crop_to_face(
+            frame,
+            margin=float(portrait_cfg.get("crop_margin", 0.35)),
+            cascade_path=str(portrait_cfg.get("face_cascade", "")),
+            scale_factor=float(portrait_cfg.get("scale_factor", 1.1)),
+            min_neighbors=int(portrait_cfg.get("min_neighbors", 4)),
+            min_size_px=int(portrait_cfg.get("min_size_px", 60)),
+        )
+        cv2.imwrite(str(Path(out_dir) / "debug_face_crop.png"), crop)
+        print(f"  debug: face {'detected' if found else 'NOT detected'}; "
+              f"wrote debug_capture.png + debug_face_crop.png")
+
     edges = to_line_art(frame, conf["drawing"])
     cv2.imwrite(str(Path(out_dir) / "lineart.png"), edges)
 
     # 3. Vectorize -> strokes.
     strokes = strokes_from_edges(edges, conf["drawing"])
     print(f"Traced {len(strokes)} strokes.")
+
+    # 3b. Place the face into the chosen caricature scene.
+    canvas_px = int(conf["drawing"].get("capture", {}).get("target_px", 512))
+    style = resolve_style(conf["scenes"], args.style, interactive=True)
+    strokes = compose(strokes, style, conf["scenes"], canvas_px)
+    print(f"Style: {style} ({len(strokes)} strokes after composing).")
 
     # 4. Plan.
     moves = plan(strokes, conf["workspace"])
@@ -123,10 +148,28 @@ def main(argv=None) -> int:
                         help="Capture + preview + gallery, but skip arm motion.")
     parser.add_argument("--slow", action="store_true",
                         help="Slower, safer arm moves.")
+    parser.add_argument("--debug", action="store_true",
+                        help="Save the raw capture and detected face crop to "
+                             "output/ (debug_capture.png, debug_face_crop.png).")
     parser.add_argument("--title", default="Visitor", help="Title on the postcard.")
+    parser.add_argument("--style", default=None,
+                        help="Caricature scene style (e.g. engineer, cyclist, "
+                             "driver, painter, none). Omit to be prompted. "
+                             "See --list-styles.")
+    parser.add_argument("--list-styles", action="store_true",
+                        help="List the available caricature styles and exit.")
     parser.add_argument("--host", default="127.0.0.1", help="Arm agent host.")
     parser.add_argument("--port", type=int, default=8765, help="Arm agent port.")
-    return run(parser.parse_args(argv))
+    args = parser.parse_args(argv)
+
+    if args.list_styles:
+        scenes_cfg = cfg.load_all()["scenes"]
+        print("Available caricature styles:")
+        for name, label in available_styles(scenes_cfg):
+            print(f"  {name:12s} {label}")
+        return 0
+
+    return run(args)
 
 
 if __name__ == "__main__":

@@ -23,8 +23,20 @@ ensure_venv() {
 
 case "${1:-dry}" in
   setup)
+    # Native deps (numpy/opencv) are best provided by Debian's prebuilt
+    # packages on the UNO Q (arm64): there is no numpy<2 wheel for Python 3.13,
+    # so a plain `pip install` would slowly compile it from source. Prefer apt,
+    # then make a --system-site-packages venv so it can see them, and only pip
+    # what the system didn't provide.
+    if command -v apt-get >/dev/null 2>&1; then
+      echo "Installing Debian prebuilt native deps (no source compile)..."
+      sudo apt-get update
+      sudo apt-get install -y python3-venv python3-pip \
+        python3-numpy python3-opencv python3-pil python3-yaml || \
+        echo "apt install failed; will fall back to pip wheels." >&2
+    fi
     rm -rf "$VENV"
-    if ! err="$(python3 -m venv "$VENV" 2>&1)"; then
+    if ! err="$(python3 -m venv --system-site-packages "$VENV" 2>&1)"; then
       echo "$err" >&2
       rm -rf "$VENV"
       if printf '%s' "$err" | grep -q "ensurepip"; then
@@ -46,7 +58,21 @@ EOF
       exit 1
     fi
     "$PY" -m pip install --upgrade pip
-    "$PY" -m pip install -r requirements.txt
+    # Install only the modules the system packages did not already satisfy, so
+    # numpy/opencv come from apt (prebuilt) and never trigger a source build.
+    "$PY" - <<'PYDEPS'
+import importlib.util as u, subprocess, sys
+want = [("cv2", "opencv-python-headless>=4.8"),
+        ("numpy", "numpy>=1.24"),
+        ("PIL", "Pillow>=10.0"),
+        ("yaml", "PyYAML>=6.0")]
+missing = [pip for mod, pip in want if u.find_spec(mod) is None]
+if missing:
+    print("pip installing (not provided by system):", missing)
+    subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
+else:
+    print("All native deps satisfied by Debian packages; nothing to compile.")
+PYDEPS
     echo "Done. Virtualenv ready at $VENV."
     ;;
   dry)

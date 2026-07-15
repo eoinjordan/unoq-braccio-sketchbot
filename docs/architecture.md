@@ -2,10 +2,11 @@
 
 ```
  Razer Kiyo (face cam) ─► portrait.py ─► vectorize.py ─► planner.py ─► kinematics.py ─► arm_client.py ─► Braccio
-                                                             │                                  ▲
- Solid Year gripper cam ─► calibration.py (homography) ──────┘                                  │
-                                                             │                                  │
+                                                                                                   │
                                           preview.py / gallery.py ─► output/ ─► web/server.py :7100
+
+ Setup (run once before drawing):
+ Solid Year gripper cam ─► calibration.py ─► config/homography.json  (verify paper placement)
 ```
 
 ## Modules

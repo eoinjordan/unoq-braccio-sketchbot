@@ -44,3 +44,9 @@ servo_calibration:
 motion:
   settle_s: 0.15           # pause after each pen-down point
   pen_change_s: 0.4        # pause on pen up/down transitions
+
+planner:
+  # When the next stroke starts within this distance of where the last one
+  # ended, keep the pen down and draw straight through the gap instead of
+  # lifting. Reduces slow pen up/down cycles. 0 = always lift between strokes.
+  join_gap_mm: 4.0

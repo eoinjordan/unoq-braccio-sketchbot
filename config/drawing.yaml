@@ -5,25 +5,42 @@ capture:
 
 portrait:
   detect_face: true        # crop to the largest detected face
-  crop_margin: 0.35        # padding around the face box (fraction of box size)
+  crop_margin: 0.18        # padding around the face box (fraction of box size);
+                           # lower = less background traced around the face
   # Haar cascade shipped with OpenCV; leave blank to auto-locate.
   face_cascade: ""
+  # Detection sensitivity. Lower min_size_px / min_neighbors detect smaller or
+  # further-away faces (at the cost of more false positives). If the pipeline
+  # keeps tracing the whole room, lower min_size_px first.
+  scale_factor: 1.1        # Haar pyramid step (closer to 1.0 = more thorough)
+  min_neighbors: 4         # higher = fewer false positives, stricter
+  min_size_px: 60          # smallest detectable face (pixels)
+
+caricature:
+  enabled: true            # false = straight 1:1 sketch
+  strength: 0.35           # 0 = off; ~0.3 gentle, ~0.6 strong big-head look
+  center_x: 0.5            # warp centre as a fraction of the crop (0..1)
+  center_y: 0.42           # slightly high so the eyes/nose are enlarged most
 
 edges:
-  method: canny            # "canny" or "dog" (difference of gaussians)
-  bilateral_d: 7           # edge-preserving smoothing before edges
-  bilateral_sigma: 75
-  canny_low: 60
-  canny_high: 160
+  method: dog              # "dog" (difference of gaussians, softer portrait
+                           # lines) or "canny" (crisper, more background edges)
+  bilateral_d: 9           # edge-preserving smoothing before edges
+  bilateral_sigma: 110     # higher = flatter skin/wall texture
+  bilateral_passes: 2      # repeat the smoothing; the main texture-noise killer
+  canny_low: 90            # only used when method == "canny"
+  canny_high: 200
   dog_sigma1: 1.0          # only used when method == "dog"
-  dog_sigma2: 2.4
+  dog_sigma2: 2.6
+  dog_threshold: 12        # drop weak DoG edges (0 = Otsu, much noisier)
+  despeckle_px: 2          # morphological open kernel to remove noise dots (0 = off)
 
 vectorize:
-  min_contour_len_px: 12   # drop specks shorter than this
-  simplify_epsilon_px: 1.5 # Douglas-Peucker tolerance (higher = fewer points)
-  max_strokes: 400         # cap total strokes to keep drawing time sane
+  min_contour_len_px: 24   # drop specks shorter than this (raised to prune noise)
+  simplify_epsilon_px: 2.0 # Douglas-Peucker tolerance (higher = fewer points)
+  max_strokes: 140         # hard cap on lines drawn (lower = faster, sparser)
   max_points_per_stroke: 120
 
 style:
   # Optional caricature emphasis: thicken/keep only the strongest edges.
-  keep_longest_fraction: 1.0   # 1.0 = keep all; <1 keeps only longest strokes
+  keep_longest_fraction: 0.5   # 1.0 = keep all; <1 keeps only longest strokes

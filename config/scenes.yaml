@@ -1,0 +1,123 @@
+# Caricature scene templates.
+#
+# The detected face line-art is scaled and placed into `head_box`, and the
+# `strokes` below are drawn around it to build a themed caricature (an engineer
+# at the bench, a cyclist, a driver, a painter, ...).
+#
+# Coordinate space for BOTH head_box and strokes is the square line-art canvas
+# with the origin at the top-left, x to the right, y down, expressed as
+# fractions of the canvas side (0.0 - 1.0). head_box is [x, y, width, height].
+#
+# `default` is used when no --style is given and the run is non-interactive.
+
+default: engineer
+
+styles:
+  # Plain portrait: face fills the page, no scene.
+  none:
+    label: "Plain portrait (no scene)"
+    head_box: [0.0, 0.0, 1.0, 1.0]
+    strokes: []
+
+  # Engineer holding a soldering iron over a small PCB.
+  engineer:
+    label: "Engineer with a soldering iron"
+    head_box: [0.34, 0.03, 0.32, 0.30]
+    strokes:
+      # Shoulders + torso.
+      - [[0.30, 0.36], [0.26, 0.60], [0.74, 0.60], [0.70, 0.36]]
+      # Left arm resting on the bench.
+      - [[0.30, 0.40], [0.20, 0.52], [0.24, 0.60]]
+      # Right arm reaching out holding the iron.
+      - [[0.70, 0.40], [0.82, 0.48], [0.88, 0.56]]
+      # Soldering iron: handle + thin tip.
+      - [[0.84, 0.54], [0.94, 0.58]]
+      - [[0.88, 0.56], [0.80, 0.62]]
+      # PCB on the bench with a couple of pads.
+      - [[0.60, 0.66], [0.86, 0.66], [0.86, 0.74], [0.60, 0.74], [0.60, 0.66]]
+      - [[0.66, 0.70], [0.68, 0.70]]
+      - [[0.74, 0.70], [0.76, 0.70]]
+      # Bench line.
+      - [[0.10, 0.78], [0.90, 0.78]]
+
+  # Two people working together on a machine.
+  teamwork:
+    label: "Working together on a machine"
+    head_box: [0.30, 0.05, 0.24, 0.26]
+    strokes:
+      # First person torso (under the head slot).
+      - [[0.30, 0.33], [0.28, 0.58], [0.54, 0.58], [0.52, 0.33]]
+      # First person arm to the machine.
+      - [[0.52, 0.38], [0.62, 0.46]]
+      # Second person (drawn as line art, simple head + torso to the right).
+      - [[0.72, 0.20], [0.72, 0.20]]
+      - [[0.66, 0.14], [0.78, 0.14], [0.78, 0.26], [0.66, 0.26], [0.66, 0.14]]
+      - [[0.72, 0.26], [0.70, 0.50], [0.86, 0.50], [0.84, 0.26]]
+      - [[0.70, 0.34], [0.62, 0.46]]
+      # Shared machine / control panel between them.
+      - [[0.44, 0.50], [0.66, 0.50], [0.66, 0.72], [0.44, 0.72], [0.44, 0.50]]
+      - [[0.50, 0.58], [0.60, 0.58]]
+      - [[0.50, 0.64], [0.60, 0.64]]
+      - [[0.10, 0.78], [0.90, 0.78]]
+
+  # Sitting in a car.
+  driver:
+    label: "Sitting in a car"
+    head_box: [0.30, 0.06, 0.26, 0.28]
+    strokes:
+      # Torso.
+      - [[0.32, 0.36], [0.30, 0.58], [0.56, 0.58], [0.54, 0.36]]
+      # Arm to the wheel.
+      - [[0.54, 0.42], [0.66, 0.50]]
+      # Steering wheel.
+      - [[0.70, 0.56], [0.70, 0.42]]
+      - [[0.62, 0.49], [0.86, 0.49]]
+      - [[0.66, 0.44], [0.82, 0.44]]
+      # Car body outline.
+      - [[0.08, 0.74], [0.18, 0.56], [0.40, 0.50], [0.62, 0.50],
+         [0.90, 0.60], [0.92, 0.74]]
+      # Wheels.
+      - [[0.24, 0.80], [0.24, 0.80]]
+      - [[0.20, 0.80], [0.28, 0.80]]
+      - [[0.72, 0.80], [0.80, 0.80]]
+
+  # Riding a bicycle.
+  cyclist:
+    label: "Riding a bicycle"
+    head_box: [0.26, 0.04, 0.24, 0.26]
+    strokes:
+      # Leaning torso.
+      - [[0.28, 0.30], [0.40, 0.52]]
+      # Arm to the handlebar.
+      - [[0.36, 0.40], [0.56, 0.50]]
+      # Leg to the pedal.
+      - [[0.40, 0.52], [0.44, 0.68], [0.52, 0.72]]
+      # Bike frame.
+      - [[0.30, 0.78], [0.52, 0.56], [0.66, 0.78]]
+      - [[0.52, 0.56], [0.52, 0.72]]
+      - [[0.52, 0.56], [0.66, 0.56]]
+      # Handlebar.
+      - [[0.60, 0.50], [0.68, 0.54]]
+      # Wheels.
+      - [[0.22, 0.78], [0.38, 0.78]]
+      - [[0.58, 0.78], [0.74, 0.78]]
+
+  # Holding a paint brush at an easel.
+  painter:
+    label: "Holding a paint brush"
+    head_box: [0.32, 0.05, 0.28, 0.28]
+    strokes:
+      # Torso.
+      - [[0.32, 0.35], [0.30, 0.60], [0.58, 0.60], [0.56, 0.35]]
+      # Arm raised with the brush.
+      - [[0.56, 0.40], [0.68, 0.34], [0.76, 0.28]]
+      # Paint brush: handle + bristle tip.
+      - [[0.74, 0.30], [0.84, 0.24]]
+      - [[0.74, 0.30], [0.70, 0.34]]
+      # Palette in the other hand.
+      - [[0.24, 0.52], [0.36, 0.50], [0.38, 0.58], [0.26, 0.60], [0.24, 0.52]]
+      # Easel / canvas.
+      - [[0.62, 0.20], [0.90, 0.20], [0.90, 0.62], [0.62, 0.62], [0.62, 0.20]]
+      - [[0.76, 0.62], [0.72, 0.80]]
+      - [[0.76, 0.62], [0.82, 0.80]]
+      - [[0.10, 0.80], [0.90, 0.80]]
