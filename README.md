@@ -6,6 +6,10 @@ UNO Q** takes a photo of a visitor, turns it into a line-art caricature, and
 sketches appear on a branded **live web gallery**, exactly like a trade-show
 Sketchbot wall.
 
+
+<img width="1468" height="1226" alt="image" src="https://github.com/user-attachments/assets/ce3979b6-4087-427d-b4b2-44b041321ee8" />
+
+
 <img width="1575" height="803" alt="image" src="https://github.com/user-attachments/assets/9333462d-fc6e-4a82-adbd-92492d693beb" />
 
 
