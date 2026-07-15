@@ -76,29 +76,34 @@ def resolve_video_device(usb_id: str) -> str:
 
 def _open_capture(
     device: str, width: int, height: int, warmup_frames: int
-) -> Optional["cv2.VideoCapture"]:
-    """Open one node and return the capture only if it delivers a real frame.
+) -> tuple[Optional["cv2.VideoCapture"], str]:
+    """Open one node; return ``(capture, note)``.
 
-    Forces MJPG, which most UVC webcams need to stream at speed; a node that
-    opens but only yields empty frames (e.g. a metadata node, or an
-    unsupported format) is released and ``None`` is returned.
+    ``capture`` is ``None`` on failure and ``note`` says *why* so the caller can
+    build a precise error (permission/busy vs. no usable format). We try MJPG
+    (fast, what most UVC webcams want), then YUYV, then the driver default, at
+    the requested size and a safe 640x480 fallback, keeping whichever first
+    delivers a real frame.
     """
     cap = cv2.VideoCapture(device, cv2.CAP_V4L2)
     if not cap.isOpened():
         cap.release()
-        return None
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-    # Warm up, then give the sensor several attempts to produce a valid frame.
-    for _ in range(max(0, warmup_frames)):
-        cap.read()
-    for _ in range(10):
-        ok, frame = cap.read()
-        if ok and frame is not None and frame.size > 0:
-            return cap
+        return None, "could not open (permission denied or device busy)"
+    for fourcc in ("MJPG", "YUYV", None):
+        for (w, h) in ((width, height), (640, 480)):
+            if fourcc:
+                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+            for _ in range(max(0, warmup_frames)):
+                cap.read()
+            for _ in range(10):
+                ok, frame = cap.read()
+                if ok and frame is not None and frame.size > 0:
+                    note = f"{fourcc or 'default'} {frame.shape[1]}x{frame.shape[0]}"
+                    return cap, note
     cap.release()
-    return None
+    return None, "opened but delivered no frames (no usable format/size)"
 
 
 class Camera:
@@ -112,19 +117,25 @@ class Camera:
         candidates = resolve_video_devices(usb_id)
         self.cap = None
         self.device = None
+        notes = []
         for device in candidates:
-            cap = _open_capture(device, width, height, warmup_frames)
+            cap, note = _open_capture(device, width, height, warmup_frames)
+            notes.append(f"{device}: {note}")
             if cap is not None:
                 self.cap = cap
                 self.device = device
                 break
         if self.cap is None:
-            tried = ", ".join(candidates)
+            detail = "\n  ".join(notes)
             raise RuntimeError(
-                f"Camera {usb_id} opened but produced no frames on any of its "
-                f"nodes ({tried}). If another process is using it (e.g. an App "
-                f"Lab camera streamer), stop it; otherwise check the cable and "
-                f"that the container is privileged with /dev/video* access."
+                f"Camera {usb_id} could not deliver frames. Per node:\n  "
+                f"{detail}\n"
+                f"Checks: is this user in the 'video' group? "
+                f"(`groups`; `ls -l {candidates[0]}`; fix with "
+                f"`sudo usermod -aG video $USER` then re-login). "
+                f"Is another process holding it? (`sudo fuser -v /dev/video*`). "
+                f"What formats does it support? "
+                f"(`v4l2-ctl --list-formats-ext -d {candidates[0]}`)."
             )
 
     def read(self) -> np.ndarray:
@@ -157,3 +168,50 @@ def open_camera(cameras_cfg: dict, role: str) -> Camera:
         height=int(spec.get("height", 720)),
         warmup_frames=int(spec.get("warmup_frames", 4)),
     )
+
+
+def _diagnose() -> int:
+    """Print all video nodes and try to open each configured camera role.
+
+    Run with ``python -m sketch_artist.cameras`` to see exactly which node a
+    role resolves to, which format/size worked, or the precise failure.
+    """
+    print("Video nodes (USB id):")
+    for row in list_video_nodes():
+        print("  " + row)
+
+    from .config import load_yaml
+
+    cams = load_yaml("cameras.yaml").get("cameras", {})
+    if not cams:
+        print("\nNo cameras configured in config/cameras.yaml")
+        return 1
+
+    failures = 0
+    for role, spec in cams.items():
+        usb = spec.get("usb_id", "")
+        print(f"\n[{role}] usb_id={usb}")
+        try:
+            print("  nodes: " + ", ".join(resolve_video_devices(usb)))
+        except RuntimeError as exc:
+            print("  " + str(exc).replace("\n", "\n  "))
+            failures += 1
+            continue
+        try:
+            cam = Camera(
+                usb_id=usb,
+                width=int(spec.get("width", 1280)),
+                height=int(spec.get("height", 720)),
+                warmup_frames=int(spec.get("warmup_frames", 4)),
+            )
+            frame = cam.read()
+            print(f"  OK -> {cam.device}, frame {frame.shape[1]}x{frame.shape[0]}")
+            cam.close()
+        except RuntimeError as exc:
+            print("  FAIL: " + str(exc).replace("\n", "\n  "))
+            failures += 1
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_diagnose())
