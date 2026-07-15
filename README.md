@@ -9,6 +9,8 @@ Sketchbot wall.
 <img width="1575" height="803" alt="image" src="https://github.com/user-attachments/assets/9333462d-fc6e-4a82-adbd-92492d693beb" />
 
 
+<img width="1650" height="1433" alt="image" src="https://github.com/user-attachments/assets/b9662f78-6514-448e-8e65-c687678afa6e" />
+
 
 
 <img width="1800" height="1822" alt="image" src="https://github.com/user-attachments/assets/0460f688-38cf-4082-8923-3eaf0989cadf" />
