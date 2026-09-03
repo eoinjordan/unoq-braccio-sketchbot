@@ -19,6 +19,8 @@ Sketchbot wall.
 
 <img width="1800" height="1822" alt="image" src="https://github.com/user-attachments/assets/0460f688-38cf-4082-8923-3eaf0989cadf" />
 
+<img width="1679" height="936" alt="image" src="https://github.com/user-attachments/assets/cd5d7fb7-3e27-4e78-991f-71b35f6dbbc4" />
+
 
 ```
  Razer Kiyo (face cam) ──► portrait ──► vectorize ──► plan strokes ──► IK ──► Braccio pencil
