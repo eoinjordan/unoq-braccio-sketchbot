@@ -66,11 +66,31 @@ def loop():
                 time.sleep(0.05)
                 continue
 
+            # Keep the connection open and process every newline-delimited
+            # command: the sketchbot streams all its moves over one socket, so
+            # closing after the first (the old behaviour) broke the pipe on
+            # move #2.
             with client:
-                data = client.recv(128).decode("ascii", errors="replace")
-                response = handle_command(data)
-                client.sendall((response + "\n").encode("ascii"))
-                print(f"{address[0]}: {data.strip()} -> {response}")
+                client.settimeout(30.0)
+                buffer = ""
+                while True:
+                    try:
+                        chunk = client.recv(256)
+                    except socket.timeout:
+                        break
+                    if not chunk:
+                        break
+                    buffer += chunk.decode("ascii", errors="replace")
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        if not line.strip():
+                            continue
+                        response = handle_command(line)
+                        try:
+                            client.sendall((response + "\n").encode("ascii"))
+                        except OSError:
+                            break
+                        print(f"{address[0]}: {line.strip()} -> {response}")
 
 
 App.run(user_loop=loop)
