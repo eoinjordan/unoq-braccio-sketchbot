@@ -1,0 +1,10 @@
+profiles:
+  default:
+    fqbn: arduino:zephyr:unoq
+    platforms:
+      - platform: arduino:zephyr
+    # Only Servo is needed. Do NOT add Braccio (no arduino:zephyr build) or
+    # Arduino_RouterBridge (now bundled in the arduino:zephyr platform).
+    libraries:
+      - Servo
+default_profile: default

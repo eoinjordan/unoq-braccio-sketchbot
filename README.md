@@ -73,20 +73,25 @@ tool with an M3 screw — print `hardware/pencil-grip/braccio_pencil_grip_8mm.st
 
 ## Prerequisites
 
-- An UNO Q running the Braccio **arm-control agent** on `127.0.0.1:8765`
-  (use the arm-only `braccio_remote_agent`, **not** the web agent, so the
-  cameras stay free for this app). It speaks the same `M`/`S` protocol as the
-  `unoq-braccio` project.
+- An UNO Q running the Braccio **arm-control agent** on `127.0.0.1:8765`.
+  Deploy it from this repo — [`app_lab/braccio_remote_agent`](app_lab/braccio_remote_agent/)
+  (Arduino App Lab; `Servo`-only, builds on the UNO Q's Zephyr core):
+  ```bash
+  cp -r app_lab/braccio_remote_agent ~/ArduinoApps/
+  arduino-app-cli app start ~/ArduinoApps/braccio_remote_agent   # -> listening on 8765
+  ```
   > **No hardware?** Skip this and use the built-in **software simulator** or
   > **Gazebo** instead — see [Simulation](#simulation-no-hardware) below. Both
   > speak the same `M`/`S` protocol, so nothing else changes.
 - Docker on the UNO Q (arm64), or Python 3.11+ with the `requirements.txt`
   installed. (OpenCV is pinned to **4.x** — 5.x dropped the bundled Haar
   cascades the face detector needs.)
-- Both cameras plugged in. Verify with:
+- A camera is optional for a first run (use `--image`). For live capture, plug
+  in the wrist USB camera and set its VID:PID in `config/cameras.yaml`; list
+  nodes with:
 
   ```bash
-  ./scripts/list_cameras.sh
+  python -m sketch_artist.cameras
   ```
 
 ## Quick start (dry run, no arm)
@@ -251,8 +256,7 @@ paper placement and put them in `config/workspace.yaml`. See
 
 ```text
 sketch_artist/     Vision + planning + kinematics + FK + sim + arm client
-web/               Branded live gallery web server + static assets
-config/            Camera, workspace, drawing and branding configuration
+web/               Branded live gallery web server + static assetsapp_lab/           Arduino App Lab arm-control agent (deploy to the UNO Q)config/            Camera, workspace, drawing and branding configuration
 assets/            Edge Impulse postcard template + logo/QR slots
 hardware/          3D-printable Braccio pencil grip + camera mounts (STL/SCAD)
 sim/               Headless arm renderer + Gazebo M/S bridge (real model)

@@ -1,0 +1,7 @@
+name: UNOQ Braccio Remote Agent
+description: "Network bridge so the sketchbot can drive a Braccio on the UNO Q (M/S protocol on :8765)"
+icon:
+version: "0.1.0"
+ports:
+  - 8765
+bricks: []
