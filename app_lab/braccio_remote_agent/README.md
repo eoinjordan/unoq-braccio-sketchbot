@@ -16,8 +16,9 @@ S                                                                         -> STA
 
 > **Libraries:** only **`RoboServo`** (by *dunknowcoding*) — it supports the
 > UNO Q. Do **not** use **`Servo`** or **`Braccio`** (no `arduino:zephyr` build),
-> nor list **`Arduino_RouterBridge`** (bundled in the platform). Install
-> RoboServo from the App Lab library panel (or Library Manager) before running.
+> nor list **`Arduino_RouterBridge`** (bundled in the platform). The version is
+> **pinned** in `sketch.yaml` (`RoboServo (1.2.0)`) because App Lab can't resolve
+> an unversioned reference (it requests `RoboServo@` and reports not-found).
 
 ## Deploy on the UNO Q
 

@@ -6,6 +6,8 @@ profiles:
     # RoboServo (by dunknowcoding) supports the UNO Q; the classic Servo and
     # Braccio libraries have no arduino:zephyr build. Arduino_RouterBridge is
     # bundled in the platform, so it must NOT be listed here.
+    # Pin the version: App Lab can't resolve an unversioned "RoboServo" (it
+    # requests "RoboServo@" and reports not-found); "(1.2.0)" downloads cleanly.
     libraries:
-      - RoboServo
+      - RoboServo (1.2.0)
 default_profile: default
