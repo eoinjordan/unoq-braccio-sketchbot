@@ -64,3 +64,15 @@ class ArmClient:
     def status(self) -> str:
         """Query the current arm status line."""
         return self._send("S")
+
+
+def move_to_pose(angles, host: str = "127.0.0.1", port: int = 8765,
+                 timeout: float = 3.0) -> bool:
+    """Best-effort: move the arm to a 6-servo pose. Returns False (without
+    raising) if the arm agent is unreachable, so camera-aiming is optional."""
+    try:
+        with ArmClient(host=host, port=port, timeout=timeout) as arm:
+            arm.move(tuple(int(a) for a in angles))
+        return True
+    except OSError:
+        return False

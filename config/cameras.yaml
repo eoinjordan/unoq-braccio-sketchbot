@@ -1,16 +1,31 @@
 # Cameras are resolved by USB vendor:product ID so the roles stay stable even
-# when /dev/videoN numbering changes across reboots. Find IDs with `lsusb`.
+# when /dev/videoN numbering changes across reboots. Find IDs with `lsusb`, or
+# run `python -m sketch_artist.cameras` to list nodes and their VID:PID.
+#
+# ONE-CAMERA RIG (recommended): a single wrist-mounted USB camera does both
+# jobs. The arm points it at the visitor to capture the portrait, then at the
+# paper to calibrate (see `camera_poses` in workspace.yaml). Both the `face` and
+# `gripper` roles fall back to this shared `single` camera.
 cameras:
-  face:
-    description: "Person-facing camera used to capture the portrait"
-    usb_id: "1532:0e03"      # Razer USA, Ltd Gaming Webcam [Kiyo]
+  single:
+    description: "Wrist-mounted USB camera (UNO Q USB-C OTG -> USB-A webcam)"
+    usb_id: "0000:0000"      # <-- set to YOUR camera's VID:PID (see above)
     width: 1280
     height: 720
     warmup_frames: 8         # frames to discard so exposure/white-balance settle
 
-  gripper:
-    description: "Gripper-mounted camera viewing the paper while drawing"
-    usb_id: "060b:8038"      # Solid Year SW72011
-    width: 640
-    height: 480
-    warmup_frames: 4
+# TWO-CAMERA RIG (alternative): a fixed person-facing camera plus a gripper
+# camera. Remove the `single:` entry above and uncomment these to give each role
+# a dedicated device.
+#  face:
+#    description: "Person-facing camera used to capture the portrait"
+#    usb_id: "1532:0e03"     # Razer USA, Ltd Gaming Webcam [Kiyo]
+#    width: 1280
+#    height: 720
+#    warmup_frames: 8
+#  gripper:
+#    description: "Gripper-mounted camera viewing the paper while drawing"
+#    usb_id: "060b:8038"     # Solid Year SW72011
+#    width: 640
+#    height: 480
+#    warmup_frames: 4

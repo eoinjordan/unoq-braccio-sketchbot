@@ -35,7 +35,8 @@ Sketchbot wall.
 
 ## What it does
 
-1. **Capture** – grab a frame from the person-facing **Razer Kiyo** webcam.
+1. **Capture** – aim the **wrist-mounted camera** at the visitor (the arm moves
+   to a "person" pose) and grab a frame.
 2. **Portrait → caricature line art** – detect the face, **segment the person**
    (GrabCut) so the hair/head outline is drawn and a busy background dropped,
    then trace the silhouette + interior features (glasses, eyes, beard) into
@@ -46,24 +47,24 @@ Sketchbot wall.
    pen travel, and insert pen-up / pen-down moves.
 5. **Draw** – stream joint commands to the Braccio over the arm agent
    (`127.0.0.1:8765`), using inverse kinematics to place the pencil tip.
-6. **Calibrate / monitor** – the **gripper-mounted** Solid Year camera finds
-   the paper corners (homography) so drawings land on the branded box, and
-   provides a live view while drawing.
+6. **Calibrate** – aim the **same wrist camera** at the paper (a "page" pose) to
+   find the paper corners (homography) so drawings land on the branded box.
 7. **Gallery** – composite the finished sketch onto the Edge Impulse postcard
    template and publish it to the **live web gallery** page.
 
 ## Hardware
 
-| Role            | Device                              | USB ID       |
-| --------------- | ----------------------------------- | ------------ |
-| Face camera     | Razer Kiyo                          | `1532:0e03`  |
-| Gripper camera  | Solid Year SW72011                  | `060b:8038`  |
-| Arm             | Arduino UNO Q + TinkerKit Braccio   | —            |
-| Pen             | 3D-printed drawing grip (see `hardware/pencil-grip/`) | —   |
+| Role   | Device                                                 | USB ID        |
+| ------ | ------------------------------------------------------ | ------------- |
+| Camera | **One** USB webcam on the wrist (UNO Q USB-C OTG)       | set in config |
+| Arm    | Arduino UNO Q + TinkerKit Braccio                      | —             |
+| Pen    | 3D-printed drawing grip (see `hardware/pencil-grip/`)  | —             |
 
-Cameras are resolved by **USB vendor:product ID**, not by `/dev/videoN`
-(which is unstable across reboots). Update `config/cameras.yaml` if you swap
-cameras.
+**One camera does both jobs**: the arm points the wrist camera at the visitor to
+capture, then at the paper to calibrate (poses in `config/workspace.yaml`
+`camera_poses`). A fixed two-camera rig (face + gripper) is still supported — see
+`config/cameras.yaml`. Cameras are resolved by **USB vendor:product ID** (stable
+across reboots); find yours with `python -m sketch_artist.cameras`.
 
 The pencil is held by a printed **replacement Braccio finger** that clamps the
 tool with an M3 screw — print `hardware/pencil-grip/braccio_pencil_grip_8mm.stl`

@@ -159,9 +159,36 @@ class Camera:
         self.close()
 
 
+def resolve_camera_spec(cameras_cfg: dict, role: str) -> dict:
+    """Return the camera spec for a ``role`` (``face``/``gripper``).
+
+    Supports a **one-camera rig**: if the role has no dedicated entry, fall back
+    to a shared ``single`` (or ``wrist``) camera, or to the sole camera when
+    exactly one is configured. That lets a single wrist-mounted camera serve
+    both the portrait capture and the paper calibration.
+    """
+    cams = cameras_cfg.get("cameras", {}) or {}
+
+    def usable(spec) -> bool:
+        return isinstance(spec, dict) and bool(spec.get("usb_id"))
+
+    if usable(cams.get(role)):
+        return cams[role]
+    for shared in ("single", "wrist"):
+        if usable(cams.get(shared)):
+            return cams[shared]
+    only = [s for s in cams.values() if usable(s)]
+    if len(only) == 1:
+        return only[0]
+    raise KeyError(
+        f"No camera configured for role '{role}'. Add a 'cameras.{role}' entry, "
+        f"or a shared 'cameras.single' camera for a one-camera (wrist) rig.")
+
+
 def open_camera(cameras_cfg: dict, role: str) -> Camera:
-    """Open the camera configured for a role (``face`` or ``gripper``)."""
-    spec = cameras_cfg["cameras"][role]
+    """Open the camera for a role (``face``/``gripper``), or the shared
+    single/wrist camera on a one-camera rig."""
+    spec = resolve_camera_spec(cameras_cfg, role)
     return Camera(
         usb_id=spec["usb_id"],
         width=int(spec.get("width", 1280)),

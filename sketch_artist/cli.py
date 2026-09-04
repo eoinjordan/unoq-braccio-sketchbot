@@ -20,7 +20,7 @@ from pathlib import Path
 import cv2
 
 from . import config as cfg
-from .arm_client import ArmClient
+from .arm_client import ArmClient, move_to_pose
 from .gallery import publish, render_postcard
 from .kinematics import BraccioKinematics, UnreachableError
 from .planner import Move, move_count, plan
@@ -38,6 +38,20 @@ def _capture_face(conf) -> "cv2.Mat":
         return cam.read()
     finally:
         cam.close()
+
+
+def _look_at(conf, host: str, port: int, which: str, slow: bool) -> None:
+    """Aim a single wrist camera at the ``person`` or ``page`` by moving the arm
+    to a configured pose (``workspace.yaml`` ``camera_poses``). No-op when no
+    pose is set or the arm is unreachable — then aim the camera by hand."""
+    angles = (conf["workspace"].get("camera_poses", {}) or {}).get(which)
+    if not angles:
+        return
+    if move_to_pose(angles, host=host, port=port):
+        time.sleep(2.0 if slow else 1.0)  # settle + let the subject pose
+        print(f"  aimed the wrist camera at the {which}.")
+    else:
+        print(f"  ! arm unreachable; point the camera at the {which} manually.")
 
 
 def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
@@ -79,7 +93,8 @@ def run(args) -> int:
             return 2
         print(f"Loaded {args.image}")
     else:
-        print("Capturing from the face camera ...")
+        print("Capturing from the camera ...")
+        _look_at(conf, args.host, args.port, "person", args.slow)
         frame = _capture_face(conf)
 
     # 2. Portrait -> line art.

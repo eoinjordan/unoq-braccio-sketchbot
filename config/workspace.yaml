@@ -57,3 +57,15 @@ planner:
   # ended, keep the pen down and draw straight through the gap instead of
   # lifting. Reduces slow pen up/down cycles. 0 = always lift between strokes.
   join_gap_mm: 4.0
+
+# Single-camera rig: with one wrist-mounted camera, the arm aims it at the
+# subject to capture, then at the paper to calibrate. Servo angles are
+# [base, shoulder, elbow, wrist_vertical, wrist_rotation, gripper] in degrees,
+# sent directly to the arm (no IK).
+# ⚠️ These are NOMINAL starting values — TUNE them to your arm so the camera
+# frames the visitor / the paper, and so the 'page' pose does not drive the arm
+# into the table. Bring up with the Braccio switch as an e-stop and --slow.
+# Delete this block (or a single key) to disable auto-aiming and point by hand.
+camera_poses:
+  person: [90, 130, 45, 30, 90, 90]   # reach up/out, camera toward the visitor
+  page:   [90, 55, 95, 120, 90, 90]   # fold down, camera over the paper

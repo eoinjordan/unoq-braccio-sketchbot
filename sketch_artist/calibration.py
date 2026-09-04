@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 
 from . import config as cfg
+from .arm_client import move_to_pose
 from .cameras import open_camera
 
 
@@ -66,6 +67,11 @@ def main(argv=None) -> int:
     parser.add_argument("--save", default="config/homography.json",
                         help="Where to write the homography JSON.")
     parser.add_argument("--image", help="Use a still image instead of the camera.")
+    parser.add_argument("--host", default="127.0.0.1", help="Arm agent host (for --look).")
+    parser.add_argument("--port", type=int, default=8765, help="Arm agent port (for --look).")
+    parser.add_argument("--look", action="store_true",
+                        help="Aim a single wrist camera at the paper first by "
+                             "moving the arm to the workspace 'page' camera pose.")
     args = parser.parse_args(argv)
 
     conf = cfg.load_all()
@@ -77,6 +83,12 @@ def main(argv=None) -> int:
             print(f"Could not read image: {args.image}")
             return 2
     else:
+        if args.look:
+            angles = (conf["workspace"].get("camera_poses", {}) or {}).get("page")
+            if angles and move_to_pose(angles, host=args.host, port=args.port):
+                print("Aimed the wrist camera at the paper.")
+            else:
+                print("Could not aim the arm; point the camera at the paper manually.")
         cam = open_camera(conf["cameras"], "gripper")
         try:
             frame = cam.read()
