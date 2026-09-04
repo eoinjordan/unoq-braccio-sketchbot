@@ -95,7 +95,16 @@ def run(args) -> int:
     else:
         print("Capturing from the camera ...")
         _look_at(conf, args.host, args.port, "person", args.slow)
-        frame = _capture_face(conf)
+        try:
+            frame = _capture_face(conf)
+        except RuntimeError as exc:
+            print(f"Camera capture failed: {exc}")
+            print("  No camera connected? Draw from a photo instead:")
+            print("    python -m sketch_artist.cli --image examples/sample_face_eoin.png "
+                  "--sim --style none")
+            print("  Or set your USB camera's VID:PID in config/cameras.yaml "
+                  "(find it with: python -m sketch_artist.cameras).")
+            return 2
 
     # 2. Portrait -> line art.
     if args.debug:
