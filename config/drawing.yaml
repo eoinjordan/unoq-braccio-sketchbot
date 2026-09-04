@@ -5,7 +5,11 @@ capture:
 
 portrait:
   detect_face: true        # crop to the largest detected face
-  crop_margin: 0.18        # padding around the face box (fraction of box size);
+  segment_person: true     # GrabCut the head+hair+shoulders so the hair/face
+                           # outline is drawn and a busy background is removed
+                           # (best for real photos). Falls back to plain edges
+                           # when no face is found or segmentation fails.
+  crop_margin: 0.14        # padding around the face box (fraction of box size);
                            # lower = less background traced around the face
   # Haar cascade shipped with OpenCV; leave blank to auto-locate.
   face_cascade: ""
@@ -27,13 +31,13 @@ edges:
                            # lines) or "canny" (crisper, more background edges)
   bilateral_d: 9           # edge-preserving smoothing before edges
   bilateral_sigma: 110     # higher = flatter skin/wall texture
-  bilateral_passes: 2      # repeat the smoothing; the main texture-noise killer
+  bilateral_passes: 1      # repeat the smoothing; the main texture-noise killer
   canny_low: 90            # only used when method == "canny"
   canny_high: 200
   dog_sigma1: 1.0          # only used when method == "dog"
   dog_sigma2: 2.6
-  dog_threshold: 12        # drop weak DoG edges (0 = Otsu, much noisier)
-  despeckle_px: 2          # morphological open kernel to remove noise dots (0 = off)
+  dog_threshold: 0         # 0 = Otsu auto-threshold; keeps real-photo face detail
+  despeckle_px: 3          # morphological open kernel to remove noise dots (0 = off)
 
 vectorize:
   min_contour_len_px: 24   # drop specks shorter than this (raised to prune noise)
@@ -43,4 +47,16 @@ vectorize:
 
 style:
   # Optional caricature emphasis: thicken/keep only the strongest edges.
-  keep_longest_fraction: 0.5   # 1.0 = keep all; <1 keeps only longest strokes
+  keep_longest_fraction: 0.85  # 1.0 = keep all; <1 keeps only longest strokes
+
+# Person segmentation for the caricature (portrait.segment_person). The crop is
+# expanded around the detected face to include hair (above) and beard/shoulders
+# (below); GrabCut then separates the person from the background.
+segment:
+  margin_top: 1.15         # expand crop above the face box (x face height) for hair
+  margin_sides: 0.55       # expand crop left/right (x face width)
+  margin_bottom: 0.95      # expand crop below (x face height) for beard/shoulders
+  grabcut_iters: 5         # GrabCut refinement iterations
+  outline_simplify_px: 2.5 # Douglas-Peucker tolerance for the head/hair outline
+  interior_canny_low: 40   # interior feature edges (glasses, eyes, beard)
+  interior_canny_high: 120

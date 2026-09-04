@@ -13,6 +13,22 @@ services:
     command: ["python", "-m", "web.server"]
     restart: unless-stopped
 
+  # Software arm simulator (M/S protocol) — a drop-in for the real UNO Q agent
+  # so the pipeline can draw with no hardware or Gazebo. Start it, then point
+  # the pipeline at 127.0.0.1:8765:
+  #   docker compose up -d sim
+  #   docker compose run --rm sketchbot \
+  #       python -m sketch_artist.cli --image examples/sample_face_eoin.png --style engineer
+  sim:
+    build: .
+    container_name: sketchbot_sim
+    network_mode: host          # expose the sim agent on 127.0.0.1:8765
+    volumes:
+      - ./output:/app/output
+      - ./config:/app/config:ro
+    command: ["python", "-m", "sketch_artist.sim", "--port", "8765"]
+    restart: unless-stopped
+
   # The capture -> draw pipeline. Runs on demand:
   #   docker compose run --rm sketchbot                 # capture + draw
   #   docker compose run --rm sketchbot python -m sketch_artist.cli --dry-run

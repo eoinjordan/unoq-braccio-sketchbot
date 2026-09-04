@@ -2,7 +2,7 @@
 branded gallery card.
 
 Examples:
-    python -m sketch_artist.cli --image examples/sample_face.jpg --dry-run
+    python -m sketch_artist.cli --image examples/sample_face_eoin.png --dry-run
     python -m sketch_artist.cli                 # full demo (captures + draws)
     python -m sketch_artist.cli --no-arm        # capture + gallery, no motion
     python -m sketch_artist.cli --slow          # slower, safer arm moves
@@ -27,6 +27,7 @@ from .planner import Move, move_count, plan
 from .portrait import crop_to_face, to_line_art
 from .preview import render_png, render_svg
 from .scenes import (available_styles, compose, resolve_style)
+from .sim import SimArmAgent
 from .vectorize import strokes_from_edges
 
 
@@ -40,7 +41,7 @@ def _capture_face(conf) -> "cv2.Mat":
 
 
 def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
-                 host: str, port: int, slow: bool) -> None:
+                 host: str, port: int, slow: bool) -> dict:
     pen = workspace_cfg["pen"]
     motion = workspace_cfg.get("motion", {})
     down_z = float(pen["down_z_mm"])
@@ -48,7 +49,7 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
     settle = float(motion.get("settle_s", 0.15)) * (2.0 if slow else 1.0)
     pen_change = float(motion.get("pen_change_s", 0.4)) * (2.0 if slow else 1.0)
 
-    skipped = 0
+    drawn = skipped = 0
     with ArmClient(host=host, port=port) as arm:
         for m in moves:
             z = down_z if m.pen_down else up_z
@@ -58,10 +59,12 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
                 skipped += 1
                 continue
             arm.move(angles.as_tuple())
+            drawn += 1
             time.sleep(pen_change if not m.pen_down else settle)
     if skipped:
         print(f"  ! {skipped} move(s) were out of reach and skipped "
               f"(check config/workspace.yaml geometry)")
+    return {"drawn": drawn, "skipped": skipped}
 
 
 def run(args) -> int:
@@ -127,7 +130,22 @@ def run(args) -> int:
     publish(card_path, conf["branding"], title=args.title)
     print(f"Published gallery card: {card_path}")
 
-    # 7. Draw on the arm (unless dry-run / no-arm).
+    # 7. Draw: on the software simulator (--sim), or the real arm, or not at all.
+    if args.sim:
+        agent = SimArmAgent(conf["workspace"]).start()
+        kin = BraccioKinematics(conf["workspace"])
+        print(f"Drawing on the software simulator at 127.0.0.1:{agent.port} ...")
+        try:
+            stats = _draw_on_arm(moves, conf["workspace"], kin,
+                                 "127.0.0.1", agent.port, args.slow)
+            sim_out = str(cfg.resolve_path(args.sim_render))
+            agent.simulator.render(sim_out)
+        finally:
+            agent.stop()
+        print(f"Simulator drew {stats['drawn']} points "
+              f"({stats['skipped']} out of reach); wrote {sim_out}")
+        return 0
+
     if args.dry_run or args.no_arm:
         print("Skipping arm motion (dry-run / no-arm).")
         return 0
@@ -146,6 +164,12 @@ def main(argv=None) -> int:
                         help="Run the whole pipeline but do not move the arm.")
     parser.add_argument("--no-arm", action="store_true",
                         help="Capture + preview + gallery, but skip arm motion.")
+    parser.add_argument("--sim", action="store_true",
+                        help="Draw against the built-in software simulator "
+                             "instead of a real arm (no hardware needed) and "
+                             "save what it drew to --sim-render.")
+    parser.add_argument("--sim-render", default="output/sim_drawing.png",
+                        help="Where --sim writes the simulated drawing PNG.")
     parser.add_argument("--slow", action="store_true",
                         help="Slower, safer arm moves.")
     parser.add_argument("--debug", action="store_true",

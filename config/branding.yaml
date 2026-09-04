@@ -26,7 +26,7 @@ postcard:
     x: 90
     y: 250
     w: 870
-    h: 870                 # square box (matches 150x150 mm paper)
+    h: 870                 # square box (matches the square paper in workspace.yaml)
   header_height_px: 210
   footer_height_px: 150
 

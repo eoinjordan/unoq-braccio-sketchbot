@@ -36,9 +36,11 @@ Sketchbot wall.
 ## What it does
 
 1. **Capture** – grab a frame from the person-facing **Razer Kiyo** webcam.
-2. **Portrait → line art** – detect the face, crop, and convert to clean
-   single-stroke line art (edges + contours). Optionally use an Edge Impulse
-   model to gate capture (e.g. "person present" / "smile").
+2. **Portrait → caricature line art** – detect the face, **segment the person**
+   (GrabCut) so the hair/head outline is drawn and a busy background dropped,
+   then trace the silhouette + interior features (glasses, eyes, beard) into
+   clean single-stroke line art. Optionally use an Edge Impulse model to gate
+   capture (e.g. "person present" / "smile").
 3. **Vectorize** – turn the line art into ordered pen strokes.
 4. **Plan** – scale strokes into the paper workspace, order them to minimise
    pen travel, and insert pen-up / pen-down moves.
@@ -74,8 +76,12 @@ tool with an M3 screw — print `hardware/pencil-grip/braccio_pencil_grip_8mm.st
   (use the arm-only `braccio_remote_agent`, **not** the web agent, so the
   cameras stay free for this app). It speaks the same `M`/`S` protocol as the
   `unoq-braccio` project.
+  > **No hardware?** Skip this and use the built-in **software simulator** or
+  > **Gazebo** instead — see [Simulation](#simulation-no-hardware) below. Both
+  > speak the same `M`/`S` protocol, so nothing else changes.
 - Docker on the UNO Q (arm64), or Python 3.11+ with the `requirements.txt`
-  installed.
+  installed. (OpenCV is pinned to **4.x** — 5.x dropped the bundled Haar
+  cascades the face detector needs.)
 - Both cameras plugged in. Verify with:
 
   ```bash
@@ -96,7 +102,7 @@ this for you):
 sudo apt update && sudo apt install -y python3-venv python3-pip
 
 ./scripts/run_demo.sh setup        # creates .venv and installs requirements
-./scripts/run_demo.sh dry          # dry-run from examples/sample_face.jpg
+./scripts/run_demo.sh dry          # dry-run from examples/sample_face_eoin.png
 xdg-open output/preview.png        # toolpath the arm would draw
 xdg-open output/gallery/*.png      # branded postcard
 ```
@@ -110,7 +116,7 @@ Equivalently, by hand:
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python -m sketch_artist.cli --image examples/sample_face.jpg --dry-run
+.venv/bin/python -m sketch_artist.cli --image examples/sample_face_eoin.png --dry-run
 ```
 
 > Don't run `pip install -r requirements.txt` against the system Python — it
@@ -140,6 +146,76 @@ Or bring the whole thing up with Docker (cameras + arm reach + gallery):
 docker compose up -d --build
 docker compose logs -f sketchbot
 ```
+
+## Simulation (no hardware)
+
+You can run the **entire** capture → plan → draw loop with no arm. The
+simulator is a drop-in for the real UNO Q agent: it speaks the same `M`/`S`
+protocol, runs **forward kinematics** on every servo command to track the pen
+tip, and renders exactly what the arm would have drawn. Because it inverts the
+same IK the real arm uses, a faithful sim drawing means the geometry, IK,
+planner and stroke ordering are all correct.
+
+### 1. Software simulator (fast, dependency-free — great for CI)
+
+```bash
+# Draw the sample end-to-end on the built-in simulator, no arm needed:
+./scripts/run_demo.sh sim --style none
+xdg-open output/sim_drawing.png     # what the simulated pen actually drew
+```
+
+The portrait step segments the person, so the pen draws the hair/head outline
+and glasses as a clean caricature — here is the sample drawn on the simulator:
+
+![The caricature the sketchbot draws](docs/images/caricature.png)
+
+Equivalently, drive it exactly like the real arm over TCP:
+
+```bash
+./scripts/run_demo.sh agent                       # M/S sim agent on :8765
+# ...then in another shell, the normal pipeline (no --sim flag):
+.venv/bin/python -m sketch_artist.cli --image examples/sample_face_eoin.png \
+    --style cyclist --host 127.0.0.1 --port 8770
+```
+
+With Docker: `docker compose up -d sim` starts the agent on `:8765`, then
+`docker compose run --rm sketchbot python -m sketch_artist.cli --image \
+examples/sample_face_eoin.png --style engineer` draws against it.
+
+### 2. Gazebo (full 3D physics view, real Braccio model)
+
+The sketchbot drives the **real mesh Braccio** from the companion
+[`unoq-braccio`](https://github.com/edgeimpulse/unoq-braccio) repo
+(`unoq_braccio_sim`). The bridge in [`sim/gazebo/`](sim/gazebo/) speaks the same
+`M`/`S` protocol and republishes moves to that model's controller, so nothing in
+the pipeline changes:
+
+```bash
+ros2 launch braccio_sim sketchbot_gazebo.launch.py   # Gazebo + Braccio + bridge :8765
+.venv/bin/python -m sketch_artist.cli --image examples/sample_face_eoin.png --style none
+```
+
+See [sim/gazebo/README.md](sim/gazebo/README.md) for the build/run steps. No ROS
+box handy? Render the **same** model + meshes headlessly with the sketchbot
+driving it (needs the `unoq-braccio` meshes; the render derives from GPL-3.0
+meshes, so generate it locally rather than committing it):
+
+```bash
+.venv/bin/pip install trimesh matplotlib scipy
+.venv/bin/python -m sim.render_arm --out output/gazebo_caricature.png
+```
+
+## Testing
+
+```bash
+.venv/bin/pip install -r requirements-dev.txt   # adds pytest
+./scripts/run_demo.sh test                       # or: .venv/bin/python -m pytest
+```
+
+The suite covers config/geometry sanity (including a guard that the whole paper
+is reachable), the IK ↔ FK round trip, the planner, vectorizer, scenes,
+preview/gallery, the `M`/`S` protocol over a real socket, and a full
+end-to-end pipeline run against the simulator.
 
 ## Configuration
 
@@ -173,12 +249,14 @@ paper placement and put them in `config/workspace.yaml`. See
 ## Repository layout
 
 ```text
-sketch_artist/     Vision + planning + kinematics + arm client (the pipeline)
+sketch_artist/     Vision + planning + kinematics + FK + sim + arm client
 web/               Branded live gallery web server + static assets
 config/            Camera, workspace, drawing and branding configuration
 assets/            Edge Impulse postcard template + logo/QR slots
-hardware/          3D-printable Braccio pencil grip (STL/OBJ/SCAD)
+hardware/          3D-printable Braccio pencil grip + camera mounts (STL/SCAD)
+sim/               Headless arm renderer + Gazebo M/S bridge (real model)
 scripts/           Camera listing and demo runner helpers
+tests/             pytest suite (pipeline, kinematics, sim, end-to-end)
 docs/              Architecture, calibration and safety notes
 examples/          A sample face image for dry runs
 ```

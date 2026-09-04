@@ -1,0 +1,10 @@
+# Development / CI dependencies (runtime deps + the test runner).
+-r requirements.txt
+pytest>=8.0
+
+# Optional: the headless 3D arm renderer (sim/render_arm.py). Not needed on the
+# UNO Q or for the test suite; install to regenerate the Gazebo teaching figure
+# (docs/images/gazebo_caricature.png) from the unoq_braccio_sim STL meshes.
+# trimesh>=4.0
+# matplotlib>=3.7
+# scipy>=1.10

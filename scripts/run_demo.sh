@@ -3,8 +3,11 @@
 #
 #   ./scripts/run_demo.sh setup          # create .venv and install requirements
 #   ./scripts/run_demo.sh dry            # dry-run from the sample image
+#   ./scripts/run_demo.sh sim            # draw the sample on the software sim
+#   ./scripts/run_demo.sh agent          # run the standalone sim arm agent :8765
 #   ./scripts/run_demo.sh draw           # full capture + draw
 #   ./scripts/run_demo.sh gallery        # start the live gallery (:7100)
+#   ./scripts/run_demo.sh test           # run the pytest suite
 #
 # On Debian/Arduino UNO Q the system Python is "externally managed" (PEP 668)
 # and only `python3` exists, so we always run through a local virtualenv.
@@ -77,7 +80,20 @@ PYDEPS
     ;;
   dry)
     ensure_venv
-    "$PY" -m sketch_artist.cli --image examples/sample_face.jpg --dry-run
+    "$PY" -m sketch_artist.cli --image examples/sample_face_eoin.png --dry-run
+    ;;
+  sim)
+    # End-to-end on the built-in software simulator (no arm, no Gazebo).
+    # Extra args pass through, e.g. --style engineer or --image other.jpg.
+    ensure_venv
+    "$PY" -m sketch_artist.cli --sim --image examples/sample_face_eoin.png "${@:2}"
+    ;;
+  agent)
+    # Standalone simulator arm agent speaking the M/S protocol on :8765,
+    # a drop-in for the real UNO Q agent. Draw against it from another shell:
+    #   ./scripts/run_demo.sh draw --style engineer
+    ensure_venv
+    "$PY" -m sketch_artist.sim "${@:2}"
     ;;
   draw)
     ensure_venv
@@ -87,8 +103,16 @@ PYDEPS
     ensure_venv
     "$PY" -m web.server
     ;;
+  test)
+    ensure_venv
+    if ! "$PY" -c "import pytest" 2>/dev/null; then
+      echo "pytest not installed. Run: $PY -m pip install -r requirements-dev.txt" >&2
+      exit 1
+    fi
+    "$PY" -m pytest "${@:2}"
+    ;;
   *)
-    echo "usage: $0 {setup|dry|draw|gallery}" >&2
+    echo "usage: $0 {setup|dry|sim|agent|draw|gallery|test}" >&2
     exit 2
     ;;
 esac

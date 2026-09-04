@@ -19,11 +19,18 @@ links:
 # Paper drawing area, described in the arm base frame:
 #   origin = the near-left corner of the drawing box,
 #   +x points away from the base, +y points to the arm's left.
+#
+# These nominal values keep the WHOLE box inside the arm's reach for the
+# default link lengths: the planar reach is limited to
+#   r_max = sqrt((shoulder+elbow)^2 - (down_z + wrist_pen - base_height)^2)
+# (~248 mm here), and the far corner (230, 55) sits at r=236 mm. Move/resize the
+# box to match your booth, but keep every corner within r_max or the planner
+# will report moves "out of reach" and skip them. See docs/calibration.md.
 paper:
-  origin_x_mm: 150
-  origin_y_mm: -75
-  width_mm: 150            # drawing box size along +x
-  height_mm: 150           # drawing box size along +y
+  origin_x_mm: 120
+  origin_y_mm: -55
+  width_mm: 110            # drawing box size along +x
+  height_mm: 110           # drawing box size along +y
 
 pen:
   down_z_mm: 2             # pencil tip height while drawing (touching paper)

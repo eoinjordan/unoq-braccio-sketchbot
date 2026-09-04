@@ -6,7 +6,11 @@
 # numpy-2 clean. On the device, `scripts/run_demo.sh setup` prefers Debian's
 # python3-numpy / python3-opencv (prebuilt) so nothing has to compile at all.
 numpy>=1.24
-opencv-python-headless>=4.8
+# Cap below 5.0: opencv-python 5.x dropped the bundled Haar cascades
+# (cv2/data), which the portrait face-detector needs. 4.x ships them and is
+# numpy-2 clean. On the UNO Q, Debian's python3-opencv (4.x) + opencv-data
+# provide the same cascades.
+opencv-python-headless>=4.8,<5
 # Branded gallery card compositing (text, logo, QR overlay)
 Pillow>=10.0
 # Config files

@@ -34,6 +34,31 @@ def _find_face_cascade(explicit: str = "") -> Optional[str]:
     return None
 
 
+def detect_face_rect(
+    bgr: np.ndarray,
+    cascade_path: str = "",
+    scale_factor: float = 1.1,
+    min_neighbors: int = 4,
+    min_size_px: int = 60,
+) -> Optional[tuple]:
+    """Return ``(x, y, w, h)`` of the largest detected face, or None."""
+    cascade_file = _find_face_cascade(cascade_path)
+    if not cascade_file:
+        return None
+    cascade = cv2.CascadeClassifier(cascade_file)
+    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+    faces = cascade.detectMultiScale(
+        gray,
+        scaleFactor=scale_factor,
+        minNeighbors=min_neighbors,
+        minSize=(min_size_px, min_size_px),
+    )
+    if len(faces) == 0:
+        return None
+    x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+    return int(x), int(y), int(w), int(h)
+
+
 def crop_to_face(
     bgr: np.ndarray,
     margin: float,
@@ -47,20 +72,10 @@ def crop_to_face(
     Returns ``(image, found)``. When no face is detected ``found`` is False and
     the original image is returned unchanged.
     """
-    cascade_file = _find_face_cascade(cascade_path)
-    if not cascade_file:
+    rect = detect_face_rect(bgr, cascade_path, scale_factor, min_neighbors, min_size_px)
+    if rect is None:
         return bgr, False
-    cascade = cv2.CascadeClassifier(cascade_file)
-    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-    faces = cascade.detectMultiScale(
-        gray,
-        scaleFactor=scale_factor,
-        minNeighbors=min_neighbors,
-        minSize=(min_size_px, min_size_px),
-    )
-    if len(faces) == 0:
-        return bgr, False
-    x, y, w, h = max(faces, key=lambda f: f[2] * f[3])
+    x, y, w, h = rect
     pad_x, pad_y = int(w * margin), int(h * margin)
     x0 = max(0, x - pad_x)
     y0 = max(0, y - pad_y)
@@ -80,6 +95,94 @@ def _fit_square(bgr: np.ndarray, size: int) -> np.ndarray:
     x0 = (size - rw) // 2
     canvas[y0:y0 + rh, x0:x0 + rw] = resized
     return canvas
+
+
+def _fit_square_edges(edges: np.ndarray, size: int) -> np.ndarray:
+    """Fit a binary edge image into a square canvas, padding with black.
+
+    Unlike ``_fit_square`` (white padding for photos), edge images are white
+    lines on black, so the padding must be black or it would be traced as ink.
+    """
+    h, w = edges.shape[:2]
+    scale = size / max(h, w)
+    resized = cv2.resize(edges, (int(w * scale), int(h * scale)),
+                         interpolation=cv2.INTER_NEAREST)
+    canvas = np.zeros((size, size), dtype=np.uint8)
+    rh, rw = resized.shape[:2]
+    y0 = (size - rh) // 2
+    x0 = (size - rw) // 2
+    canvas[y0:y0 + rh, x0:x0 + rw] = resized
+    _, out = cv2.threshold(canvas, 127, 255, cv2.THRESH_BINARY)
+    return out
+
+
+def _caricature_line_art(bgr: np.ndarray, rect: tuple, drawing_cfg: dict,
+                         size: int) -> Optional[np.ndarray]:
+    """Caricature line art via person segmentation.
+
+    GrabCut isolates the head + hair + shoulders from the background; the
+    silhouette becomes the hair/face outline and interior Canny edges add the
+    glasses and features. Returns a square binary image, or None if
+    segmentation fails (the caller then falls back to plain edge tracing).
+    """
+    seg = drawing_cfg.get("segment", {})
+    x, y, w, h = rect
+    frame_h, frame_w = bgr.shape[:2]
+    top = float(seg.get("margin_top", 1.15))
+    side = float(seg.get("margin_sides", 0.55))
+    bottom = float(seg.get("margin_bottom", 0.95))
+    x0 = max(0, int(x - side * w))
+    y0 = max(0, int(y - top * h))
+    x1 = min(frame_w, int(x + w + side * w))
+    y1 = min(frame_h, int(y + h + bottom * h))
+    crop = bgr[y0:y1, x0:x1]
+    ch, cw = crop.shape[:2]
+    if ch < 40 or cw < 40:
+        return None
+
+    mask = np.zeros((ch, cw), np.uint8)
+    inset_x = max(1, int(0.06 * cw))
+    inset_y = max(1, int(0.04 * ch))
+    grab_rect = (inset_x, inset_y, cw - 2 * inset_x, ch - 2 * inset_y)
+    bgd = np.zeros((1, 65), np.float64)
+    fgd = np.zeros((1, 65), np.float64)
+    try:
+        cv2.grabCut(crop, mask, grab_rect, bgd, fgd,
+                    int(seg.get("grabcut_iters", 5)), cv2.GC_INIT_WITH_RECT)
+    except cv2.error:
+        return None
+    fg = np.where((mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD), 255, 0).astype(np.uint8)
+
+    # Keep only the largest blob so stray background patches are dropped.
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(fg, 8)
+    if count > 1:
+        largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+        fg = np.where(labels == largest, 255, 0).astype(np.uint8)
+    fg = cv2.morphologyEx(fg, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+    if fg.mean() / 255.0 < 0.05:
+        return None
+
+    contours, _ = cv2.findContours(fg, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return None
+    outline = cv2.approxPolyDP(max(contours, key=cv2.contourArea),
+                               float(seg.get("outline_simplify_px", 2.5)), True)
+    silhouette = np.zeros((ch, cw), np.uint8)
+    cv2.drawContours(silhouette, [outline], -1, 255, 2)
+
+    # Interior features (glasses, eyes, beard), kept inside an eroded mask so
+    # neither the outline nor the background is retraced.
+    inner = cv2.erode(fg, np.ones((7, 7), np.uint8))
+    gray = cv2.bilateralFilter(cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY), 9, 75, 75)
+    interior = cv2.Canny(gray, int(seg.get("interior_canny_low", 40)),
+                         int(seg.get("interior_canny_high", 120)))
+    interior = cv2.bitwise_and(interior, interior, mask=inner)
+    # Bridge broken Canny fragments so the glasses/eyes trace as whole strokes
+    # (short fragments are otherwise dropped by the vectorizer length filter).
+    interior = cv2.morphologyEx(interior, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+
+    combined = cv2.max(silhouette, interior)
+    return _fit_square_edges(combined, size)
 
 
 def caricature_warp(
@@ -127,6 +230,21 @@ def to_line_art(bgr: np.ndarray, drawing_cfg: dict) -> np.ndarray:
     edges_cfg = drawing_cfg.get("edges", {})
     caricature_cfg = drawing_cfg.get("caricature", {})
     size = int(cap_cfg.get("target_px", 512))
+
+    # Preferred path: segment the person so the hair/head outline is drawn and a
+    # busy background is removed. Falls back to plain edge tracing on failure.
+    if portrait_cfg.get("detect_face", True) and portrait_cfg.get("segment_person", True):
+        rect = detect_face_rect(
+            bgr,
+            cascade_path=str(portrait_cfg.get("face_cascade", "")),
+            scale_factor=float(portrait_cfg.get("scale_factor", 1.1)),
+            min_neighbors=int(portrait_cfg.get("min_neighbors", 4)),
+            min_size_px=int(portrait_cfg.get("min_size_px", 60)),
+        )
+        if rect is not None:
+            art = _caricature_line_art(bgr, rect, drawing_cfg, size)
+            if art is not None:
+                return art
 
     if portrait_cfg.get("detect_face", True):
         cropped, found = crop_to_face(
