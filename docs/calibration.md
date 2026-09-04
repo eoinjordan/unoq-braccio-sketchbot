@@ -32,13 +32,14 @@ with `offset + sign * geometric` (`workspace.yaml` → `servo_calibration`).
    `pen.up_z_mm` until the pen touches with light, even pressure. The printed
    grip is rigid, so go slowly — a small Z error shows up directly as pressure.
 
-## 4. Paper homography (gripper camera)
+## 4. Paper homography (wrist camera at the page pose)
 
 ```bash
 .venv/bin/python -m sketch_artist.calibration --save config/homography.json
 ```
 
-This detects the paper's four corners in the gripper-camera view and stores a
+This detects the paper's four corners in the wrist-camera view (arm at the page
+pose) and stores a
 camera-pixel → paper-millimetre homography. Use it to confirm the paper is where
 `workspace.yaml` claims and to monitor drawing. For booth robustness, replace
 the plain-quad detector with an ArUco/AprilTag marker.

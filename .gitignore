@@ -6,6 +6,12 @@ __pycache__/
 venv/
 .env
 
+# Arduino / App Lab build caches (can be large; regenerated on build)
+.cache/
+
+# Firmware Wi-Fi credentials (copy secrets.h.example -> secrets.h locally)
+firmware/**/secrets.h
+
 # Generated output (sketches, previews, gallery cards)
 output/
 config/homography.json

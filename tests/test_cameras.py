@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from sketch_artist.cameras import resolve_camera_spec
+from sketch_artist.cameras import HttpCamera, open_camera, resolve_camera_spec
 
 
 def _cfg(cameras):
@@ -46,3 +46,21 @@ def test_no_usable_camera_raises():
     ambiguous = _cfg({"a": {"usb_id": "1:1"}, "b": {"usb_id": "2:2"}})
     with pytest.raises(KeyError):
         resolve_camera_spec(ambiguous, "face")
+
+
+def test_esp_eye_url_resolves():
+    cfg = _cfg({"single": {"url": "http://esp-eye.local/capture"}})
+    assert resolve_camera_spec(cfg, "face")["url"] == "http://esp-eye.local/capture"
+
+
+def test_esp_eye_serial_resolves():
+    cfg = _cfg({"single": {"serial": "/dev/ttyUSB0", "baud": 921600}})
+    assert resolve_camera_spec(cfg, "gripper")["serial"] == "/dev/ttyUSB0"
+
+
+def test_open_camera_dispatches_to_http_without_io():
+    # Constructing an HttpCamera must not touch the network, so this is safe.
+    cam = open_camera(_cfg({"single": {"url": "http://127.0.0.1:1/capture"}}), "face")
+    assert isinstance(cam, HttpCamera)
+    assert cam.url == "http://127.0.0.1:1/capture"
+    cam.close()

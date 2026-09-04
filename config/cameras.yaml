@@ -29,3 +29,20 @@ cameras:
 #    width: 640
 #    height: 480
 #    warmup_frames: 4
+
+# ESP-EYE CAMERA (no USB webcam needed): flash firmware/esp_eye_camera and point
+# the `single` camera at it. Use ONE transport instead of `usb_id`:
+#
+#   Wi-Fi (both on the same network):
+#  single:
+#    description: "ESP-EYE over Wi-Fi"
+#    url: "http://esp-eye.local/capture"   # or http://<esp-eye-ip>/capture
+#    width: 800
+#    height: 600
+#
+#   USB (ESP-EYE micro-USB -> UNO Q USB-C):
+#  single:
+#    description: "ESP-EYE over USB"
+#    serial: "auto"        # or a fixed node like /dev/ttyUSB0
+#    baud: 921600
+#    warmup_frames: 2

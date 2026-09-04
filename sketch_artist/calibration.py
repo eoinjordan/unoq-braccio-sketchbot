@@ -1,6 +1,6 @@
-"""Calibrate the drawing plane using the gripper-mounted camera.
+"""Calibrate the drawing plane using the wrist-mounted camera.
 
-Detects the (rectangular) paper sheet in the gripper camera view and computes a
+Detects the (rectangular) paper sheet in the wrist camera view and computes a
 homography from camera pixels to paper millimetres, saved to a JSON file. This
 lets the app verify the paper is where ``workspace.yaml`` says it is and lands
 drawings inside the branded box.

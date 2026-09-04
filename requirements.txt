@@ -15,3 +15,7 @@ opencv-python-headless>=4.8,<5
 Pillow>=10.0
 # Config files
 PyYAML>=6.0
+# USB (serial) transport for the ESP-EYE camera firmware. Pure-Python, so it
+# installs from a wheel on arm64. Only needed for the `serial:` camera source;
+# the Wi-Fi (`url:`) source uses stdlib urllib.
+pyserial>=3.5

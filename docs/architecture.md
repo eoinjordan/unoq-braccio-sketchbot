@@ -1,12 +1,12 @@
 # Architecture
 
 ```
- Razer Kiyo (face cam) ─► portrait.py ─► vectorize.py ─► planner.py ─► kinematics.py ─► arm_client.py ─► Braccio
+ Wrist camera @ person pose ─► portrait.py ─► vectorize.py ─► planner.py ─► kinematics.py ─► arm_client.py ─► Braccio
                                                                                                    │
                                           preview.py / gallery.py ─► output/ ─► web/server.py :7100
 
  Setup (run once before drawing):
- Solid Year gripper cam ─► calibration.py ─► config/homography.json  (verify paper placement)
+ Wrist camera @ page pose ─► calibration.py ─► config/homography.json  (verify paper placement)
 
  No hardware:
  sketch_artist/sim.py  ─► software M/S arm agent + FK pen render (drop-in for the arm)
@@ -18,7 +18,7 @@
 | Module                       | Responsibility                                              |
 | ---------------------------- | ----------------------------------------------------------- |
 | `sketch_artist/config.py`    | Load YAML config, resolve repo-relative paths.              |
-| `sketch_artist/cameras.py`   | Resolve cameras by USB `VID:PID`, open with V4L2.           |
+| `sketch_artist/cameras.py`   | Open the camera: USB `VID:PID` (V4L2), or ESP-EYE Wi-Fi/USB. |
 | `sketch_artist/portrait.py`  | Face detect + GrabCut person segmentation → caricature line art (hair/glasses). |
 | `sketch_artist/vectorize.py` | Contours → simplified polyline strokes.                     |
 | `sketch_artist/planner.py`   | Pixels → paper mm, nearest-neighbour ordering, pen up/down. |
@@ -26,13 +26,14 @@
 | `sketch_artist/fk.py`        | Forward kinematics (inverse of the IK): servo angles → pen tip. |
 | `sketch_artist/sim.py`       | Software arm agent (`M`/`S`) + FK pen tracking + drawing render. |
 | `sketch_artist/arm_client.py`| TCP client for the arm agent (`M`/`S` protocol, `:8765`).   |
-| `sketch_artist/calibration.py`| Gripper-cam paper homography (cam px → paper mm).           |
+| `sketch_artist/calibration.py`| Wrist-cam paper homography (cam px → paper mm).             |
 | `sketch_artist/preview.py`   | Dry-run PNG/SVG of the toolpath.                            |
 | `sketch_artist/gallery.py`   | Composite the branded postcard + update the manifest.       |
 | `sketch_artist/cli.py`       | Orchestrator (`--image`, `--dry-run`, `--no-arm`, `--sim`, `--slow`).|
 | `web/server.py`              | Branded live gallery (stdlib http, port 7100).              |
 | `sim/gazebo/`                | `M`/`S` → `unoq_braccio_sim` Gazebo bridge (real Braccio model). |
 | `sim/render_arm.py`          | Headless 3D render of the real Braccio drawing the caricature. |
+| `firmware/esp_eye_camera/`   | ESP-EYE (ESP32) camera firmware: JPEG over Wi-Fi/USB.       |
 
 ## Data model
 

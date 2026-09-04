@@ -23,11 +23,11 @@ Sketchbot wall.
 
 
 ```
- Razer Kiyo (face cam) ──► portrait ──► vectorize ──► plan strokes ──► IK ──► Braccio pencil
-                                                                        │
- Solid Year gripper cam ──► paper calibration / monitoring ◄───────────┘
-                                                                        │
-                                     branded PNG ──► live web gallery ◄─┘
+ Wrist camera @ person pose ──► portrait ──► vectorize ──► plan strokes ──► IK ──► Braccio pencil
+                                                                            │
+ Wrist camera @ page pose   ──► paper calibration / monitoring ◄────────────┘
+                                                                            │
+                                        branded PNG ──► live web gallery ◄───┘
 ```
 
 > Inspired by the classic caricature "Sketchbot" installations, rebuilt on
@@ -56,7 +56,7 @@ Sketchbot wall.
 
 | Role   | Device                                                 | USB ID        |
 | ------ | ------------------------------------------------------ | ------------- |
-| Camera | **One** USB webcam on the wrist (UNO Q USB-C OTG)       | set in config |
+| Camera | **One** wrist camera — a USB webcam, or an **ESP-EYE** over Wi-Fi/USB (`firmware/esp_eye_camera/`) | set in config |
 | Arm    | Arduino UNO Q + TinkerKit Braccio                      | —             |
 | Pen    | 3D-printed drawing grip (see `hardware/pencil-grip/`)  | —             |
 
@@ -65,6 +65,10 @@ capture, then at the paper to calibrate (poses in `config/workspace.yaml`
 `camera_poses`). A fixed two-camera rig (face + gripper) is still supported — see
 `config/cameras.yaml`. Cameras are resolved by **USB vendor:product ID** (stable
 across reboots); find yours with `python -m sketch_artist.cameras`.
+
+**No USB webcam?** Flash an **ESP-EYE** (ESP32 camera) with the firmware in
+[`firmware/esp_eye_camera/`](firmware/esp_eye_camera/) and point the `single`
+camera at it over Wi-Fi (`url:`) or USB (`serial:`) in `config/cameras.yaml`.
 
 The pencil is held by a printed **replacement Braccio finger** that clamps the
 tool with an M3 screw — print `hardware/pencil-grip/braccio_pencil_grip_8mm.stl`
@@ -75,7 +79,8 @@ tool with an M3 screw — print `hardware/pencil-grip/braccio_pencil_grip_8mm.st
 
 - An UNO Q running the Braccio **arm-control agent** on `127.0.0.1:8765`.
   Deploy it from this repo — [`app_lab/braccio_remote_agent`](app_lab/braccio_remote_agent/)
-  (Arduino App Lab; `Servo`-only, builds on the UNO Q's Zephyr core):
+  (Arduino App Lab; uses the **`RoboServo`** library, which builds on the UNO Q's
+  Zephyr core — classic `Servo`/`Braccio` don't):
   ```bash
   cp -r app_lab/braccio_remote_agent ~/ArduinoApps/
   arduino-app-cli app start ~/ArduinoApps/braccio_remote_agent   # -> listening on 8765
@@ -134,7 +139,7 @@ python3 -m venv .venv
 ```bash
 # 1. Start the arm agent on the UNO Q (braccio_remote_agent) -> :8765
 # 2. Print assets/edge_impulse_paper_template.svg and tape it in the paper box
-# 3. Calibrate the paper with the gripper camera:
+# 3. Calibrate the paper with the wrist camera (arm at the page pose):
 .venv/bin/python -m sketch_artist.calibration --save config/homography.json
 # 4. Run: capture a visitor, draw them, publish to the gallery:
 .venv/bin/python -m sketch_artist.cli
@@ -227,7 +232,7 @@ end-to-end pipeline run against the simulator.
 
 | File                    | Purpose                                                        |
 | ----------------------- | ------------------------------------------------------------- |
-| `config/cameras.yaml`   | USB IDs + resolution for the face and gripper cameras         |
+| `config/cameras.yaml`   | Camera source(s): USB webcam `usb_id`, or ESP-EYE `url`/`serial` |
 | `config/workspace.yaml` | Braccio link lengths, paper placement, pen up/down heights    |
 | `config/drawing.yaml`   | Edge/contour parameters, stroke simplification, stroke cap    |
 | `config/branding.yaml`  | Edge Impulse colours, tagline, logo/QR paths, paper layout    |
@@ -256,7 +261,10 @@ paper placement and put them in `config/workspace.yaml`. See
 
 ```text
 sketch_artist/     Vision + planning + kinematics + FK + sim + arm client
-web/               Branded live gallery web server + static assetsapp_lab/           Arduino App Lab arm-control agent (deploy to the UNO Q)config/            Camera, workspace, drawing and branding configuration
+web/               Branded live gallery web server + static assets
+app_lab/           Arduino App Lab arm-control agent (deploy to the UNO Q)
+firmware/          ESP-EYE camera firmware (Wi-Fi/USB image source)
+config/            Camera, workspace, drawing and branding configuration
 assets/            Edge Impulse postcard template + logo/QR slots
 hardware/          3D-printable Braccio pencil grip + camera mounts (STL/SCAD)
 sim/               Headless arm renderer + Gazebo M/S bridge (real model)

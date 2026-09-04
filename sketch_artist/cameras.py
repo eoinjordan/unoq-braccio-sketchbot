@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import glob
 import os
+import time
+import urllib.error
+import urllib.request
 from typing import List, Optional
 
 import cv2
@@ -159,6 +162,172 @@ class Camera:
         self.close()
 
 
+def _decode_jpeg(buf: bytes, source: str) -> np.ndarray:
+    """Decode JPEG bytes to a BGR frame, or raise a helpful RuntimeError."""
+    if not buf:
+        raise RuntimeError(f"{source} returned no data")
+    frame = cv2.imdecode(np.frombuffer(buf, np.uint8), cv2.IMREAD_COLOR)
+    if frame is None or frame.size == 0:
+        raise RuntimeError(f"{source} returned data that is not a decodable JPEG")
+    return frame
+
+
+class HttpCamera:
+    """Network camera that fetches JPEG frames over HTTP (e.g. an ESP-EYE).
+
+    ``url`` should return one JPEG per GET (the ESP-EYE firmware's ``/capture``).
+    Constructing it does no network I/O; frames are fetched on ``read()``.
+    """
+
+    def __init__(self, url: str, width: int = 0, height: int = 0,
+                 warmup_frames: int = 0, timeout: float = 5.0, **_):
+        self.url = url
+        self.timeout = float(timeout)
+        self.width = width
+        self.height = height
+        for _ in range(max(0, int(warmup_frames))):
+            try:
+                self._grab()
+            except RuntimeError:
+                break
+
+    def _grab(self) -> np.ndarray:
+        try:
+            with urllib.request.urlopen(self.url, timeout=self.timeout) as resp:
+                data = resp.read()
+        except (urllib.error.URLError, OSError) as exc:
+            raise RuntimeError(
+                f"Could not fetch a frame from {self.url}: {exc}. Is the ESP-EYE "
+                f"powered and on the same network? Try opening {self.url} in a "
+                f"browser."
+            ) from exc
+        return _decode_jpeg(data, self.url)
+
+    def read(self) -> np.ndarray:
+        last: Optional[RuntimeError] = None
+        for _ in range(3):
+            try:
+                return self._grab()
+            except RuntimeError as exc:
+                last = exc
+        assert last is not None
+        raise last
+
+    def close(self) -> None:
+        pass
+
+    def __enter__(self) -> "HttpCamera":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
+
+
+class SerialCamera:
+    """Camera that pulls framed JPEGs from an ESP-EYE over USB serial.
+
+    Protocol: send ``b"C"``; read the ``0xA5 0x5A`` magic, a uint32
+    little-endian length, then that many JPEG bytes. See
+    ``firmware/esp_eye_camera/README.md``.
+    """
+
+    def __init__(self, port: str = "auto", baud: int = 921600,
+                 width: int = 0, height: int = 0, warmup_frames: int = 0,
+                 timeout: float = 6.0, **_):
+        try:
+            import serial  # pyserial
+        except ImportError as exc:
+            raise RuntimeError(
+                "The USB (serial) camera needs pyserial. Install it with "
+                "`.venv/bin/pip install pyserial` (it is in requirements.txt)."
+            ) from exc
+        self.baud = int(baud)
+        self.timeout = float(timeout)
+        self.width = width
+        self.height = height
+        self.port = self._resolve_port(port)
+        self.ser = serial.Serial(self.port, self.baud, timeout=self.timeout)
+        time.sleep(0.2)  # let the board settle after the port opens
+        for _ in range(max(0, int(warmup_frames))):
+            try:
+                self._grab()
+            except RuntimeError:
+                break
+
+    @staticmethod
+    def _resolve_port(port: str) -> str:
+        if port and port != "auto":
+            return port
+        candidates = sorted(glob.glob("/dev/ttyUSB*") + glob.glob("/dev/ttyACM*"))
+        if not candidates:
+            raise RuntimeError(
+                "No /dev/ttyUSB*/ttyACM* port found for the ESP-EYE. Is it "
+                "plugged into the UNO Q's USB-C? Set an explicit 'serial:' path "
+                "in config/cameras.yaml if needed."
+            )
+        return candidates[0]
+
+    def _read_exact(self, n: int) -> bytes:
+        buf = bytearray()
+        deadline = time.monotonic() + self.timeout
+        while len(buf) < n:
+            chunk = self.ser.read(n - len(buf))
+            if chunk:
+                buf.extend(chunk)
+            elif time.monotonic() > deadline:
+                raise RuntimeError(
+                    f"Timed out reading from the ESP-EYE on {self.port}")
+        return bytes(buf)
+
+    def _grab(self) -> np.ndarray:
+        self.ser.reset_input_buffer()
+        self.ser.write(b"C")
+        self.ser.flush()
+        # Scan for the magic so boot-log text on the same UART cannot desync us.
+        deadline = time.monotonic() + self.timeout
+        prev = b""
+        while True:
+            b = self.ser.read(1)
+            if not b:
+                if time.monotonic() > deadline:
+                    raise RuntimeError(
+                        f"No response from the ESP-EYE on {self.port}. Is "
+                        f"esp_eye_camera flashed and the baud {self.baud}?")
+                continue
+            if prev == b"\xa5" and b == b"\x5a":
+                break
+            prev = b
+        length = int.from_bytes(self._read_exact(4), "little")
+        if length == 0:
+            raise RuntimeError("ESP-EYE reported no frame (camera not ready)")
+        if length > 2_000_000:
+            raise RuntimeError(
+                f"ESP-EYE frame length {length} looks wrong; check the baud "
+                f"rate ({self.baud}).")
+        return _decode_jpeg(self._read_exact(length), f"{self.port} (serial)")
+
+    def read(self) -> np.ndarray:
+        last: Optional[RuntimeError] = None
+        for _ in range(3):
+            try:
+                return self._grab()
+            except RuntimeError as exc:
+                last = exc
+        assert last is not None
+        raise last
+
+    def close(self) -> None:
+        if getattr(self, "ser", None) is not None:
+            self.ser.close()
+            self.ser = None
+
+    def __enter__(self) -> "SerialCamera":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
+
+
 def resolve_camera_spec(cameras_cfg: dict, role: str) -> dict:
     """Return the camera spec for a ``role`` (``face``/``gripper``).
 
@@ -170,7 +339,8 @@ def resolve_camera_spec(cameras_cfg: dict, role: str) -> dict:
     cams = cameras_cfg.get("cameras", {}) or {}
 
     def usable(spec) -> bool:
-        return isinstance(spec, dict) and bool(spec.get("usb_id"))
+        return isinstance(spec, dict) and bool(
+            spec.get("usb_id") or spec.get("url") or spec.get("serial"))
 
     if usable(cams.get(role)):
         return cams[role]
@@ -182,13 +352,37 @@ def resolve_camera_spec(cameras_cfg: dict, role: str) -> dict:
         return only[0]
     raise KeyError(
         f"No camera configured for role '{role}'. Add a 'cameras.{role}' entry, "
-        f"or a shared 'cameras.single' camera for a one-camera (wrist) rig.")
+        f"or a shared 'cameras.single' camera for a one-camera (wrist) rig. A "
+        f"camera entry needs a 'usb_id' (USB webcam), a 'url' (ESP-EYE over "
+        f"Wi-Fi) or a 'serial' path (ESP-EYE over USB).")
 
 
-def open_camera(cameras_cfg: dict, role: str) -> Camera:
+def open_camera(cameras_cfg: dict, role: str):
     """Open the camera for a role (``face``/``gripper``), or the shared
-    single/wrist camera on a one-camera rig."""
+    single/wrist camera on a one-camera rig.
+
+    Supports three sources, chosen by the config entry: a USB webcam
+    (``usb_id``), an ESP-EYE over Wi-Fi (``url``) or an ESP-EYE over USB serial
+    (``serial``). All return an object with ``read() -> BGR frame`` / ``close()``.
+    """
     spec = resolve_camera_spec(cameras_cfg, role)
+    if spec.get("url"):
+        return HttpCamera(
+            url=str(spec["url"]),
+            width=int(spec.get("width", 0)),
+            height=int(spec.get("height", 0)),
+            warmup_frames=int(spec.get("warmup_frames", 0)),
+            timeout=float(spec.get("timeout", 5.0)),
+        )
+    if spec.get("serial"):
+        return SerialCamera(
+            port=str(spec.get("serial", "auto")),
+            baud=int(spec.get("baud", 921600)),
+            width=int(spec.get("width", 0)),
+            height=int(spec.get("height", 0)),
+            warmup_frames=int(spec.get("warmup_frames", 0)),
+            timeout=float(spec.get("timeout", 6.0)),
+        )
     return Camera(
         usb_id=spec["usb_id"],
         width=int(spec.get("width", 1280)),
@@ -216,6 +410,18 @@ def _diagnose() -> int:
 
     failures = 0
     for role, spec in cams.items():
+        if spec.get("url") or spec.get("serial"):
+            kind = "url" if spec.get("url") else "serial"
+            print(f"\n[{role}] {kind}={spec.get('url') or spec.get('serial')}")
+            try:
+                cam = open_camera({"cameras": {role: spec}}, role)
+                frame = cam.read()
+                print(f"  OK -> frame {frame.shape[1]}x{frame.shape[0]}")
+                cam.close()
+            except RuntimeError as exc:
+                print("  FAIL: " + str(exc).replace("\n", "\n  "))
+                failures += 1
+            continue
         usb = spec.get("usb_id", "")
         print(f"\n[{role}] usb_id={usb}")
         try:
