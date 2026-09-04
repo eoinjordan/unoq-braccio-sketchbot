@@ -6,6 +6,11 @@ UNO Q** takes a photo of a visitor, turns it into a line-art caricature, and
 sketches appear on a branded **live web gallery**, exactly like a trade-show
 Sketchbot wall.
 
+<p align="center">
+  <img src="docs/images/hardware-arm.jpg" width="360" alt="TinkerKit Braccio drawing through the 3D-printed pencil grip"><br>
+  <em>The real demo hardware — a TinkerKit Braccio drawing through the 3D-printed pencil grip.</em>
+</p>
+
 
 <img width="1468" height="1226" alt="image" src="https://github.com/user-attachments/assets/ce3979b6-4087-427d-b4b2-44b041321ee8" />
 
@@ -70,10 +75,19 @@ across reboots); find yours with `python -m sketch_artist.cameras`.
 [`firmware/esp_eye_camera/`](firmware/esp_eye_camera/) and point the `single`
 camera at it over Wi-Fi (`url:`) or USB (`serial:`) in `config/cameras.yaml`.
 
+<p align="center">
+  <img src="docs/images/esp-eye.png" width="200" alt="Espressif ESP-EYE camera board">
+</p>
+
 The pencil is held by a printed **replacement Braccio finger** that clamps the
 tool with an M3 screw — print `hardware/pencil-grip/braccio_pencil_grip_8mm.stl`
 (pencils) or `_10mm.stl` (pens/markers). See
 [hardware/pencil-grip/README.md](hardware/pencil-grip/README.md).
+
+<p align="center">
+  <img src="docs/images/printing-grip.jpg" width="360" alt="Slicing the pencil grip for 3D printing"><br>
+  <em>Printing the pencil grip (sliced in Creality Print).</em>
+</p>
 
 ## Prerequisites
 
@@ -150,6 +164,11 @@ Start the branded live gallery on its own (port `7100`):
 ```bash
 ./scripts/run_demo.sh gallery       # http://<uno-q>:7100
 ```
+
+<p align="center">
+  <img src="docs/images/gallery-live.jpg" width="640" alt="Edge Impulse Sketchbot live gallery web page"><br>
+  <em>The branded live gallery — finished sketches appear here in real time.</em>
+</p>
 
 Or bring the whole thing up with Docker (cameras + arm reach + gallery):
 
