@@ -27,6 +27,8 @@ repeatable.
 | `braccio_pencil_grip_8mm.scad`    | Preset wrapper (8 mm).                          |
 | `braccio_pencil_grip_10mm.scad`   | Preset wrapper (10 mm).                         |
 | `braccio_mount_reference_mm.stl`  | Exact mount geometry **required** by the SCAD.  |
+| `braccio_wrist_camera_bracket.stl`| Bracket for the wrist/gripper-mounted camera.  |
+| `braccio_camera_mount.stl`        | End-effector ("last DOF") camera mount.        |
 | `braccio_pencil_grip_preview.png` | Render preview.                                |
 
 The two STLs are watertight and validated (see the Thingiverse package): both
