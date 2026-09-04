@@ -3,8 +3,9 @@ profiles:
     fqbn: arduino:zephyr:unoq
     platforms:
       - platform: arduino:zephyr
-    # Only Servo is needed. Do NOT add Braccio (no arduino:zephyr build) or
-    # Arduino_RouterBridge (now bundled in the arduino:zephyr platform).
+    # RoboServo (by dunknowcoding) supports the UNO Q; the classic Servo and
+    # Braccio libraries have no arduino:zephyr build. Arduino_RouterBridge is
+    # bundled in the platform, so it must NOT be listed here.
     libraries:
-      - Servo
+      - RoboServo
 default_profile: default

@@ -1,13 +1,14 @@
 // Self-contained Braccio driver for the Arduino UNO Q (arduino:zephyr).
 //
-// The classic `Braccio` library has no arduino:zephyr build, so we drive the
-// six servos directly with `Servo` on the Braccio shield pins and move them
-// smoothly (one degree per 20 ms step). Exposes the same `move_braccio(...)`
-// entry point the remote agent's Python side calls over the App Lab Bridge.
+// Neither the classic `Braccio` nor `Servo` library has an arduino:zephyr
+// build, so we drive the six servos with `RoboServo` (which supports the UNO Q)
+// on the Braccio shield pins and move them smoothly (one degree per 20 ms
+// step). Exposes the same `move_braccio(...)` entry point the remote agent's
+// Python side calls over the App Lab Bridge.
 
 #include "UnoQBraccioBridge.h"
 
-#include <Servo.h>
+#include <RoboServo.h>
 
 namespace {
 const int JOINTS = 6;
@@ -16,12 +17,12 @@ const int MAX_LIMITS[JOINTS] = {180, 165, 180, 180, 180, 110};
 const int SERVO_PINS[JOINTS] = {11, 10, 9, 6, 5, 3};
 const int SOFT_START_PIN = 12;
 
-Servo base;
-Servo shoulder;
-Servo elbow;
-Servo wrist_ver;
-Servo wrist_rot;
-Servo gripper;
+RoboServo base;
+RoboServo shoulder;
+RoboServo elbow;
+RoboServo wrist_ver;
+RoboServo wrist_rot;
+RoboServo gripper;
 
 int current[JOINTS] = {90, 45, 180, 180, 90, 10};
 

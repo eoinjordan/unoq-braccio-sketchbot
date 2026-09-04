@@ -14,10 +14,10 @@ S                                                                         -> STA
   self-contained `Servo` driver (`UnoQBraccioBridge`) and provides
   `move_braccio` over the App Lab Bridge.
 
-> **Libraries:** only **`Servo`**. Do **not** add **`Braccio`** (it has no
-> `arduino:zephyr` build — `Braccio.h: No such file`) or **`Arduino_RouterBridge`**
-> (now bundled in the platform). The self-contained driver replaces the Braccio
-> library, so it builds on the UNO Q.
+> **Libraries:** only **`RoboServo`** (by *dunknowcoding*) — it supports the
+> UNO Q. Do **not** use **`Servo`** or **`Braccio`** (no `arduino:zephyr` build),
+> nor list **`Arduino_RouterBridge`** (bundled in the platform). Install
+> RoboServo from the App Lab library panel (or Library Manager) before running.
 
 ## Deploy on the UNO Q
 
