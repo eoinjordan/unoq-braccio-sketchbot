@@ -176,7 +176,13 @@ def run(args) -> int:
 
     kin = BraccioKinematics(conf["workspace"])
     print(f"Drawing on the Braccio via {args.host}:{args.port} ...")
-    _draw_on_arm(moves, conf["workspace"], kin, args.host, args.port, args.slow)
+    try:
+        _draw_on_arm(moves, conf["workspace"], kin, args.host, args.port, args.slow)
+    except OSError as exc:
+        print(f"Could not reach the arm agent at {args.host}:{args.port} ({exc}).")
+        print("  Start the arm agent (Arduino App Lab: braccio_remote_agent) so "
+              "it listens on :8765, or preview with --sim / --dry-run.")
+        return 2
     print("Done.")
     return 0
 
