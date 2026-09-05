@@ -8,11 +8,17 @@
 # `gripper` roles fall back to this shared `single` camera.
 cameras:
   single:
-    description: "Wrist-mounted USB camera (UNO Q USB-C OTG -> USB-A webcam)"
-    usb_id: "0000:0000"      # <-- set to YOUR camera's VID:PID (see above)
-    width: 1280
-    height: 720
-    warmup_frames: 8         # frames to discard so exposure/white-balance settle
+    description: "Wrist-mounted ESP-EYE over Wi-Fi (firmware/esp_eye_camera)"
+    url: "http://esp-eye.local/capture"   # or http://<esp-eye-ip>/capture
+    # The .local name is resolved ONCE when the camera opens and the address is
+    # reused for every frame after that: Windows answers mDNS by multicast every
+    # time and does not cache, measured at 13.7 s a lookup against a 0.19 s
+    # fetch. Put the raw IP here to skip even that one lookup.
+    width: 800
+    height: 600
+    warmup_frames: 2         # frames to discard so exposure/white-balance settle
+    # USB webcam instead? Swap the url for your camera's VID:PID:
+    #   usb_id: "1234:5678"  # find it with: python -m sketch_artist.cameras
 
 # TWO-CAMERA RIG (alternative): a fixed person-facing camera plus a gripper
 # camera. Remove the `single:` entry above and uncomment these to give each role

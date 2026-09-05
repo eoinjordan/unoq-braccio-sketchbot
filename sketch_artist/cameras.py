@@ -9,7 +9,10 @@ from __future__ import annotations
 import glob
 import os
 import time
+import ipaddress
+import socket
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import List, Optional
 
@@ -172,6 +175,51 @@ def _decode_jpeg(buf: bytes, source: str) -> np.ndarray:
     return frame
 
 
+# Resolved mDNS/DNS hostnames, so a `.local` camera name is looked up once per
+# process rather than once per frame.
+_HOST_CACHE: dict = {}
+
+
+def _FORGET_HOST(url: str) -> None:
+    """Drop a cached address (e.g. after a failed fetch)."""
+    host = urllib.parse.urlsplit(url).hostname
+    if host:
+        _HOST_CACHE.pop(host, None)
+
+
+def _resolved_once(url: str) -> str:
+    """Return ``url`` with its hostname replaced by a resolved IP address.
+
+    Windows resolves `.local` names by multicast every single time -- measured
+    at 13.7 s per lookup against a 0.19 s fetch -- so a camera configured as
+    ``http://esp-eye.local/capture`` would spend all its time in DNS. Resolving
+    once keeps the portable name in config while paying the cost only at open.
+
+    Returns ``url`` unchanged if the host is already an address, has no host, or
+    cannot be resolved; the caller then just uses the name as before.
+    """
+    parts = urllib.parse.urlsplit(url)
+    host = parts.hostname
+    if not host:
+        return url
+    try:
+        ipaddress.ip_address(host)
+        return url                      # already an address, nothing to do
+    except ValueError:
+        pass
+    addr = _HOST_CACHE.get(host)
+    if addr is None:
+        try:
+            addr = socket.getaddrinfo(host, parts.port or 80,
+                                      proto=socket.IPPROTO_TCP)[0][4][0]
+        except OSError:
+            return url                  # leave it to urlopen to report
+        _HOST_CACHE[host] = addr
+    netloc = f"{addr}:{parts.port}" if parts.port else addr
+    return urllib.parse.urlunsplit(
+        (parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+
+
 class HttpCamera:
     """Network camera that fetches JPEG frames over HTTP (e.g. an ESP-EYE).
 
@@ -185,6 +233,10 @@ class HttpCamera:
         self.timeout = float(timeout)
         self.width = width
         self.height = height
+        # Resolve an mDNS name ONCE. Windows does not cache .local lookups, so
+        # every frame otherwise pays the full multicast query -- measured at
+        # 13.7 s a frame against 0.19 s once the address is known.
+        self._fetch_url = _resolved_once(url)
         for _ in range(max(0, int(warmup_frames))):
             try:
                 self._grab()
@@ -193,9 +245,14 @@ class HttpCamera:
 
     def _grab(self) -> np.ndarray:
         try:
-            with urllib.request.urlopen(self.url, timeout=self.timeout) as resp:
+            with urllib.request.urlopen(self._fetch_url, timeout=self.timeout) as resp:
                 data = resp.read()
         except (urllib.error.URLError, OSError) as exc:
+            # The camera may have taken a new DHCP lease; drop the cached
+            # address so the next attempt resolves the name again.
+            if self._fetch_url != self.url:
+                self._fetch_url = self.url
+                _FORGET_HOST(self.url)
             raise RuntimeError(
                 f"Could not fetch a frame from {self.url}: {exc}. Is the ESP-EYE "
                 f"powered and on the same network? Try opening {self.url} in a "
