@@ -8,12 +8,16 @@ It powers the software arm simulator (:mod:`sketch_artist.sim`), the IK/FK
 round-trip tests, and the Gazebo bridge (which needs the same servo -> joint
 mapping to pose the model).
 
-The pen is kept vertical, so the tip sits ``wrist_pen_mm`` directly below the
-wrist point. The per-joint servo mapping in ``kinematics._map`` is::
+The Braccio is a serial arm, so the elbow and wrist servos measure the bend
+*relative to the previous link* (90 deg = in line with it) while the shoulder is
+absolute. Undoing ``kinematics._servo`` gives those bends back::
 
-    servo = clamp(round(offset + sign * geometric_deg), 0, 180)
+    geometric_deg = (servo - offset) / sign
+    theta1 = geometric(shoulder)                     # upper arm above horizontal
+    theta2 = theta1 + geometric(elbow)               # forearm
+    theta3 = theta2 + geometric(wrist_vertical)      # pen
 
-which this module inverts as ``geometric_deg = (servo - offset) / sign``. Servo
+and the tip is ``wrist_pen_mm`` along ``theta3`` from the wrist point. Servo
 values that were clamped in the forward direction cannot be recovered, so a
 round trip is exact only for poses whose servos land inside ``[0, 180]``.
 """
@@ -55,40 +59,47 @@ class BraccioForwardKinematics:
         return (servo - offset) / sign
 
     def joint_radians(self, angles: ServoTuple) -> Tuple[float, float, float, float]:
-        """Return geometric (base, shoulder, elbow, wrist_vertical) in radians."""
+        """Return (base, theta1, theta2, theta3) in radians.
+
+        ``theta1``/``theta2``/``theta3`` are the absolute elevations above
+        horizontal of the upper arm, forearm and pen, accumulated through the
+        serial chain.
+        """
+        base, shoulder, elbow, wrist_v = angles[0], angles[1], angles[2], angles[3]
+        base_rad = math.radians(self._geom_deg("base", base))
+        theta1 = math.radians(self._geom_deg("shoulder", shoulder))
+        theta2 = theta1 + math.radians(self._geom_deg("elbow", elbow))
+        theta3 = theta2 + math.radians(self._geom_deg("wrist_vertical", wrist_v))
+        return base_rad, theta1, theta2, theta3
+
+    def command_radians(self, angles: ServoTuple) -> Tuple[float, float, float, float, float, float]:
+        """All six joint angles in radians, in URDF/Gazebo model order:
+        ``(base, shoulder, elbow, wrist_vertical, wrist_rotation, gripper)``.
+
+        These are the *joint* rotations the model needs, so the elbow and wrist
+        stay relative; wrist_rotation and gripper are treated as neutral-at-90
+        revolute joints (used only to pose the simulated model, not for the pen
+        tip).
+        """
         base, shoulder, elbow, wrist_v = angles[0], angles[1], angles[2], angles[3]
         return (
             math.radians(self._geom_deg("base", base)),
             math.radians(self._geom_deg("shoulder", shoulder)),
             math.radians(self._geom_deg("elbow", elbow)),
             math.radians(self._geom_deg("wrist_vertical", wrist_v)),
+            math.radians(angles[4] - 90),
+            math.radians(angles[5] - 90),
         )
-
-    def command_radians(self, angles: ServoTuple) -> Tuple[float, float, float, float, float, float]:
-        """All six joint angles in radians, in URDF/Gazebo model order:
-        ``(base, shoulder, elbow, wrist_vertical, wrist_rotation, gripper)``.
-
-        The four planar joints use the geometric inverse; wrist_rotation and
-        gripper are treated as neutral-at-90 revolute joints (used only to pose
-        the simulated model, not for the pen tip).
-        """
-        base, shoulder, elbow, wrist_v = self.joint_radians(angles)
-        wrist_rot = math.radians(angles[4] - 90)
-        gripper = math.radians(angles[5] - 90)
-        return (base, shoulder, elbow, wrist_v, wrist_rot, gripper)
 
     def solve(self, angles: ServoTuple) -> PenTip:
         """Return the pen-tip position (mm) for the six servo angles."""
-        base, shoulder, elbow, _wrist_v = self.joint_radians(angles)
+        base, theta1, theta2, theta3 = self.joint_radians(angles)
 
-        # Two-link arm in the (in-plane reach r, height) plane, from the
-        # shoulder at (0, base_height). shoulder/elbow are absolute link angles.
-        dx = self.l1 * math.cos(shoulder) + self.l2 * math.cos(elbow)
-        dy = self.l1 * math.sin(shoulder) + self.l2 * math.sin(elbow)
+        # Walk the chain in the (in-plane reach r, height) plane, starting at
+        # the shoulder at (0, base_height).
+        r = self.l1 * math.cos(theta1) + self.l2 * math.cos(theta2) \
+            + self.wrist_pen * math.cos(theta3)
+        height = self.base_height + self.l1 * math.sin(theta1) \
+            + self.l2 * math.sin(theta2) + self.wrist_pen * math.sin(theta3)
 
-        r = dx
-        wrist_height = self.base_height + dy
-        z = wrist_height - self.wrist_pen
-        x = r * math.cos(base)
-        y = r * math.sin(base)
-        return PenTip(x, y, z)
+        return PenTip(r * math.cos(base), r * math.sin(base), height)

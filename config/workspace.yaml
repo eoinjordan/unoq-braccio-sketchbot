@@ -6,35 +6,51 @@
 # base; they will not be accurate until calibrated (see docs/calibration.md).
 
 links:
-  # Height from the table to the shoulder rotation axis.
-  base_height_mm: 72
+  # Height from the table to the shoulder rotation axis: the 10 mm base plate
+  # plus 72 mm up to the shoulder servo. Matches the Gazebo model, so the same
+  # commands draw the same picture in sim and on the bench.
+  base_height_mm: 82
   # Shoulder axis -> elbow axis.
   shoulder_mm: 125
   # Elbow axis -> wrist axis.
   elbow_mm: 125
   # Wrist axis -> pencil tip, with the printed grip (hardware/pencil-grip)
   # mounted and the pencil protruding ~25-40 mm. Tune to your build.
-  wrist_pen_mm: 95
+  #   90 mm  wrist_vertical axis -> finger mounting face (from the URDF:
+  #          60 mm to wrist_rotation + 30 mm to the finger)
+  # + 57 mm  mounting face -> bottom of the printed collar
+  # + 27 mm  pencil proud of the collar
+  # The grip's OpenSCAD source echoes this number when you render it.
+  wrist_pen_mm: 174
 
 # Paper drawing area, described in the arm base frame:
 #   origin = the near-left corner of the drawing box,
 #   +x points away from the base, +y points to the arm's left.
 #
-# These nominal values keep the WHOLE box inside the arm's reach for the
-# default link lengths: the planar reach is limited to
-#   r_max = sqrt((shoulder+elbow)^2 - (down_z + wrist_pen - base_height)^2)
-# (~248 mm here), and the far corner (230, 55) sits at r=236 mm. Move/resize the
-# box to match your booth, but keep every corner within r_max or the planner
-# will report moves "out of reach" and skip them. See docs/calibration.md.
+# The drawable region is an ANNULUS, not a disc: the elbow and wrist servos
+# only bend +-90 degrees from in line, so the shoulder-to-wrist distance has to
+# stay between hypot(shoulder, elbow) and shoulder+elbow. With the long printed
+# pen grip that band is narrow, which is why this box is small.
+#
+# Never hand-tune these values blind - the planner silently SKIPS moves it
+# cannot solve, so an oversized box just loses strokes. Run:
+#     python scripts/check_workspace.py --suggest
+# after changing any link length, pen height or the rig. Raising the arm on a
+# ~60 mm riser (or lowering the paper by the same amount) roughly doubles the
+# drawable box, because it brings the wrist point back down relative to the
+# paper. See docs/calibration.md.
 paper:
-  origin_x_mm: 120
-  origin_y_mm: -55
-  width_mm: 110            # drawing box size along +x
-  height_mm: 110           # drawing box size along +y
+  origin_x_mm: 155
+  origin_y_mm: -40
+  width_mm: 40             # drawing box size along +x
+  height_mm: 40            # drawing box size along +y
 
 pen:
   down_z_mm: 2             # pencil tip height while drawing (touching paper)
-  up_z_mm: 25              # travel height for pen-up moves between strokes
+  up_z_mm: 8               # travel height for pen-up moves between strokes.
+                           # Every extra mm of lift raises the wrist point and
+                           # shrinks the drawable area (scripts/check_workspace.py
+                           # shows by how much); 6-10 mm clears the paper fine.
   down_gripper: 90         # neutral finger angle; the printed grip clamps the
                            # pencil with a screw, so this doesn't hold the tool
 
@@ -42,8 +58,14 @@ pen:
 # with: servo = clamp(offset + sign * geometric, 0, 180).
 # Tune each offset/sign to YOUR servo zero positions with --dry-run first.
 servo_calibration:
+  # base:     servo = offset + sign * (rotation about the vertical)
+  # shoulder: servo = offset + sign * (upper-arm elevation above horizontal).
+  #           A Braccio shoulder reads 90 when the upper arm points straight up,
+  #           so the elevation IS the servo angle: offset 0.
+  # elbow / wrist_vertical: serial joints, so the geometric term is the bend
+  #           RELATIVE to the previous link; 90 = in line with it.
   base:            { offset: 90,  sign: 1 }
-  shoulder:        { offset: 90,  sign: 1 }
+  shoulder:        { offset: 0,   sign: 1 }
   elbow:           { offset: 90,  sign: 1 }
   wrist_vertical:  { offset: 90,  sign: 1 }
   wrist_rotation:  { fixed: 90 }

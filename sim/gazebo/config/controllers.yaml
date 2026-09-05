@@ -1,0 +1,34 @@
+# ros2_control setup for the sketchbot Gazebo model.
+#
+# Same controllers as unoq_braccio_sim, with two changes for drawing: a faster
+# control rate (the sketchbot streams a new target every few hundred ms, and
+# 50 Hz visibly stair-steps the strokes), and no goal-time tolerance, because
+# each new stroke point replaces the previous trajectory before it finishes and
+# would otherwise be reported as aborted.
+controller_manager:
+  ros__parameters:
+    update_rate: 200
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+arm_controller:
+  ros__parameters:
+    joints:
+      - base
+      - shoulder
+      - elbow
+      - wrist_vertical
+      - wrist_rotation
+      - gripper
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    constraints:
+      stopped_velocity_tolerance: 0.0
+      goal_time: 0.0

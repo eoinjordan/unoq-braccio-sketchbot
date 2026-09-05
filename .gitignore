@@ -5,6 +5,8 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.*
+*.env
 
 # Arduino / App Lab build caches (can be large; regenerated on build)
 .cache/

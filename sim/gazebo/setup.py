@@ -13,6 +13,8 @@ setup(
          ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
         ("share/" + package_name + "/launch", glob("launch/*.launch.py")),
+        ("share/" + package_name + "/urdf", glob("urdf/*.xacro")),
+        ("share/" + package_name + "/config", glob("config/*.yaml")),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
@@ -23,6 +25,8 @@ setup(
     entry_points={
         "console_scripts": [
             "braccio_bridge = braccio_sim.braccio_bridge:main",
+            "pen_tracker = braccio_sim.pen_tracker:main",
+            "ink_marker = braccio_sim.ink_marker:main",
         ],
     },
 )

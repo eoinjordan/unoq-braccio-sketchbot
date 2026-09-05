@@ -95,7 +95,12 @@ def plan(strokes: List[Stroke], workspace_cfg: dict) -> List[Move]:
             # Close enough: keep the pen down and draw through the gap.
             moves.append(Move(first[0], first[1], pen_down=True))
         else:
-            # Pen-up travel to the start of the stroke, then pen down.
+            # Lift where we are, travel at height, then lower. Moving straight
+            # to a pen-up point at the *next* stroke instead makes the arm
+            # interpolate diagonally from pen-down height, dragging the pen
+            # right across the drawing on the way.
+            if prev_end is not None:
+                moves.append(Move(prev_end[0], prev_end[1], pen_down=False))
             moves.append(Move(first[0], first[1], pen_down=False))
             moves.append(Move(first[0], first[1], pen_down=True))
         for pt in stroke[1:]:

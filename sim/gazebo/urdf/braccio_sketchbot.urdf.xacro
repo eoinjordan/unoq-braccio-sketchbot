@@ -1,0 +1,417 @@
+<?xml version="1.0"?>
+<!--
+  Braccio for the sketchbot, in Gazebo.
+
+  This is unoq_braccio_sim's braccio.urdf.xacro with the joint zero convention
+  corrected, and it loads that package's STL meshes, so the arm you see is the
+  same model - only the joint frames differ.
+
+  WHY A SEPARATE FILE. The upstream model puts an extra rpy="-1.5708 0 0" on the
+  shoulder, elbow and wrist_vertical joints. Because the ros2_control mapping is
+  `rad = radians(servo - 90)`, that shifts each pitch joint's zero by 90 deg:
+  the model curls under its own base at servos 90/90/90/90 and only stands up at
+  90/180/180/180, while a real Braccio stands up at 90/90/90/90. The same M
+  command therefore produced two different arms, so the sketchbot could not
+  draw the planned strokes in simulation.
+
+  Dropping those three rpy values reproduces the upstream link frames exactly
+  (verified to 1e-5 m over the whole workspace) while making servo 90 mean what
+  it means on the hardware. Everything else - meshes, visual origins,
+  collisions, inertias, the ros2_control block - is carried over unchanged, and
+  the upstream joint limits turn out to have been written for this convention
+  already (shoulder +-1.309 rad == the real 15..165 deg servo travel).
+
+  Two things are added on top:
+    * base_fixed turns the robot -90 deg about z, so +x points at the paper and
+      the model's world frame IS the sketchbot's arm frame (config/workspace.yaml);
+    * a pen link and a pen_tip frame, so the printed grip is visible and the
+      drawn path can be measured straight off TF.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="unoq_braccio_sketchbot">
+  <xacro:arg name="controllers_file" default=""/>
+  <xacro:arg name="mesh_dir" default=""/>
+  <!-- The printed parts (hardware/pencil-grip) live outside this ROS package,
+       so they have no ament share dir; the launch file works the directory out
+       from the repo layout and passes it in. grip_mesh names the variant, so
+       the 10 mm bore or the older pencil_grip (which replaces a finger rather
+       than keeping the claw) can be previewed without editing this file:
+         grip_mesh:=braccio_pen_finger_10mm.stl
+         grip_mesh:=braccio_pencil_grip_8mm.stl
+         grip_mesh:=braccio_pencil_grip_10mm.stl -->
+  <xacro:arg name="grip_mesh_dir" default=""/>
+  <xacro:arg name="grip_mesh" default="braccio_pen_finger_8mm.stl"/>
+  <!-- Wrist axis -> pen tip, metres. Keep in step with links.wrist_pen_mm. -->
+  <xacro:arg name="wrist_pen" default="0.174"/>
+  <xacro:arg name="pen_diameter" default="0.008"/>
+  <!-- Paper sheet drawn on the ground plane, metres, in the arm frame. -->
+  <xacro:arg name="paper_origin_x" default="0.155"/>
+  <xacro:arg name="paper_origin_y" default="-0.040"/>
+  <xacro:arg name="paper_width" default="0.040"/>
+  <xacro:arg name="paper_height" default="0.040"/>
+
+  <xacro:property name="wrist_pen" value="$(arg wrist_pen)"/>
+  <xacro:property name="pen_d" value="$(arg pen_diameter)"/>
+  <!-- The pen is clamped to a finger, so it is rigid against wrist_roll_link,
+       which sits 60 mm along the link from the wrist_vertical axis. -->
+  <xacro:property name="pen_from_roll" value="${wrist_pen - 0.06}"/>
+
+  <!-- Where the printed grip sits, in metres. These are the part's own SCAD
+       constants (hardware/pencil-grip/braccio_grip_lib.scad) converted from mm,
+       so the mesh can be placed without measuring it:
+         grip_bore_x/y       the pencil bore axis in the STL's own frame -
+                             finger_center_x = 16.5, and
+                             collar_y = 2.5 + 2.5 + 1.5 + 15.35/2 = 14.175
+         grip_mount_z        wrist_roll_link origin -> the Braccio finger
+                             mounting face, i.e. the gripper joint's z below.
+                             It is the SCAD's wrist_axis_to_mount_mm = 90 less
+                             the 60 mm wrist_vertical -> wrist_rotation offset.
+         grip_bore_top       |collar_top_z| - the blind end of the bore, which
+                             is what a bottomed-out pencil registers against
+         grip_collar_bottom  |collar_bottom_z| - the collar's lower face
+       The whole tool then closes on wrist_pen exactly:
+         60 + 30 + 57 + 27 = 174 mm, so pen_tip does not move. -->
+  <xacro:property name="grip_bore_x" value="0.0165"/>
+  <xacro:property name="grip_bore_y" value="0.014175"/>
+  <xacro:property name="grip_mount_z" value="0.030"/>
+  <xacro:property name="grip_bore_top" value="0.019"/>
+  <xacro:property name="grip_collar_bottom" value="0.057"/>
+  <!-- The pencil starts at the blind end of the bore and runs to the tip.
+       Sanity check if you change wrist_pen: the tip has to come out past
+       grip_collar_bottom, i.e. wrist_pen > 0.06 + grip_mount_z +
+       grip_collar_bottom (147 mm), or the pencil is retracted inside the
+       printed part and the render is lying. At the stock 174 mm it stands
+       27 mm proud. -->
+  <xacro:property name="pencil_top" value="${grip_mount_z + grip_bore_top}"/>
+  <xacro:property name="pencil_len" value="${pen_from_roll - pencil_top}"/>
+  <xacro:property name="paper_w" value="$(arg paper_width)"/>
+  <xacro:property name="paper_h" value="$(arg paper_height)"/>
+  <xacro:property name="paper_cx" value="${$(arg paper_origin_x) + paper_w / 2}"/>
+  <xacro:property name="paper_cy" value="${$(arg paper_origin_y) + paper_h / 2}"/>
+
+  <material name="orange"><color rgba="1.0 0.34 0.02 1"/></material>
+  <material name="white"><color rgba="0.86 0.86 0.82 1"/></material>
+  <material name="black"><color rgba="0.02 0.02 0.025 1"/></material>
+  <material name="lens_blue"><color rgba="0.08 0.28 0.55 1"/></material>
+  <material name="graphite"><color rgba="0.15 0.15 0.17 1"/></material>
+  <material name="paper"><color rgba="0.97 0.97 0.95 1"/></material>
+  <!-- The printed parts. Deliberately not orange: at a glance you can tell what
+       came off the printer from what is stock Braccio. -->
+  <material name="printed"><color rgba="0.16 0.55 0.50 1"/></material>
+
+  <xacro:macro name="box_inertial" params="mass x y z">
+    <inertial>
+      <mass value="${mass}"/>
+      <inertia
+        ixx="${mass * (y * y + z * z) / 12.0}"
+        iyy="${mass * (x * x + z * z) / 12.0}"
+        izz="${mass * (x * x + y * y) / 12.0}"
+        ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="mesh_visual" params="filename material x y z rr rp ry">
+    <visual>
+      <origin xyz="${x} ${y} ${z}" rpy="${rr} ${rp} ${ry}"/>
+      <geometry>
+        <mesh filename="file://$(arg mesh_dir)/${filename}" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="${material}"/>
+    </visual>
+  </xacro:macro>
+
+  <link name="world"/>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0.005"/>
+      <geometry><cylinder length="0.01" radius="0.053"/></geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.005"/>
+      <geometry><cylinder length="0.01" radius="0.053"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="2"/>
+      <inertia ixx="0.004" ixy="0" ixz="0" iyy="0.004" iyz="0" izz="0.004"/>
+    </inertial>
+  </link>
+
+  <!-- Turn the arm so +x is "away from the base", matching the paper frame in
+       config/workspace.yaml. The base plate rests on the ground plane, which
+       puts the shoulder axis 82 mm up: that is links.base_height_mm. -->
+  <joint name="base_fixed" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 -1.5708"/>
+  </joint>
+
+  <link name="braccio_base_link">
+    <xacro:mesh_visual filename="braccio_base.stl" material="orange" x="0" y="0.004" z="0" rr="0" rp="0" ry="3.1416"/>
+    <collision>
+      <origin xyz="0 0 0.035"/>
+      <geometry><cylinder radius="0.065" length="0.07"/></geometry>
+    </collision>
+    <inertial>
+      <mass value="2"/>
+      <inertia ixx="0.004" ixy="0" ixz="0" iyy="0.004" iyz="0" izz="0.004"/>
+    </inertial>
+  </link>
+
+  <link name="shoulder_link">
+    <xacro:mesh_visual filename="braccio_shoulder.stl" material="orange" x="-0.0045" y="0.0055" z="-0.026" rr="0" rp="0" ry="0"/>
+    <collision>
+      <origin xyz="0 0 0.06"/>
+      <geometry><box size="0.055 0.08 0.12"/></geometry>
+    </collision>
+    <xacro:box_inertial mass="0.1" x="0.055" y="0.08" z="0.12"/>
+  </link>
+
+  <link name="elbow_link">
+    <xacro:mesh_visual filename="braccio_elbow.stl" material="orange" x="-0.0045" y="0.005" z="-0.025" rr="0" rp="0" ry="0"/>
+    <collision>
+      <origin xyz="0 0 0.06"/>
+      <geometry><box size="0.05 0.07 0.12"/></geometry>
+    </collision>
+    <xacro:box_inertial mass="0.1" x="0.05" y="0.07" z="0.12"/>
+  </link>
+
+  <link name="wrist_pitch_link">
+    <xacro:mesh_visual filename="braccio_wrist_pitch.stl" material="orange" x="0.003" y="-0.0004" z="-0.024" rr="0" rp="0" ry="0"/>
+    <collision>
+      <origin xyz="0 0 0.035"/>
+      <geometry><box size="0.045 0.055 0.07"/></geometry>
+    </collision>
+    <xacro:box_inertial mass="0.08" x="0.045" y="0.055" z="0.07"/>
+  </link>
+
+  <link name="wrist_roll_link">
+    <xacro:mesh_visual filename="braccio_wrist_roll.stl" material="white" x="0.006" y="0" z="0" rr="0" rp="0" ry="0"/>
+    <collision>
+      <origin xyz="0 0 0.018"/>
+      <geometry><box size="0.045 0.045 0.04"/></geometry>
+    </collision>
+    <xacro:box_inertial mass="0.08" x="0.045" y="0.045" z="0.04"/>
+  </link>
+
+  <link name="right_gripper_link">
+    <xacro:mesh_visual filename="braccio_right_gripper.stl" material="white" x="0" y="-0.012" z="0.010" rr="0" rp="1.5708" ry="0"/>
+    <collision>
+      <origin xyz="0.035 -0.012 0.01"/>
+      <geometry><box size="0.08 0.012 0.014"/></geometry>
+    </collision>
+    <xacro:box_inertial mass="0.03" x="0.08" y="0.012" z="0.014"/>
+  </link>
+
+  <link name="left_gripper_link">
+    <xacro:mesh_visual filename="braccio_left_gripper.stl" material="white" x="0" y="-0.012" z="0" rr="0" rp="1.5708" ry="0"/>
+    <collision>
+      <origin xyz="0.035 -0.012 0"/>
+      <geometry><box size="0.08 0.012 0.014"/></geometry>
+    </collision>
+    <xacro:box_inertial mass="0.03" x="0.08" y="0.012" z="0.014"/>
+  </link>
+
+  <link name="camera_link">
+    <visual>
+      <origin xyz="0 0 0"/>
+      <geometry><box size="0.034 0.026 0.022"/></geometry>
+      <material name="black"/>
+    </visual>
+    <visual>
+      <origin xyz="0.018 0 0" rpy="0 1.5708 0"/>
+      <geometry><cylinder radius="0.008" length="0.006"/></geometry>
+      <material name="lens_blue"/>
+    </visual>
+    <collision><geometry><box size="0.034 0.026 0.022"/></geometry></collision>
+    <xacro:box_inertial mass="0.04" x="0.034" y="0.026" z="0.022"/>
+  </link>
+
+  <!-- The printed pencil grip (hardware/pencil-grip): a pencil clamped beside
+       the fingers, tip wrist_pen along the link from the wrist_vertical axis.
+       Visual only - it has no <collision>, so it must not push the paper around
+       in physics, and adding geometry here cannot move pen_tip, which hangs off
+       this link through pen_tip_joint below.
+
+       pen_mount is identity, so pen_link and wrist_roll_link are the same
+       frame; keeping the grip and the pencil together in this link means the
+       whole printed tool is described in one place, in terms of pen_from_roll.
+
+       NOTE, so the render is not mistaken for the real thing: on the hardware
+       the collar is on the OUTSIDE face of the finger, which puts the physical
+       pencil ~21.7 mm off the wrist axis. The rest of this model (the IK,
+       config/workspace.yaml, pen_tip) treats wrist_pen as a plain on-axis link
+       length, so the bore is placed ON the axis and the printed blade sits
+       11.675 mm to +y instead of on top of a stock finger. That keeps the mesh
+       honest about where pen_tip is, which is the thing that matters here. -->
+  <link name="pen_link">
+    <!-- The printed finger. The STL is in mm, with the mounting face at its own
+         z=0, the bore on its own +z at (16.5, 14.175) and the finger hanging
+         down -z. roll=pi turns the finger to hang down pen_link +z; the
+         translation then drops the bore onto pen_link's z axis and the mounting
+         face onto z = grip_mount_z. -->
+    <visual>
+      <origin xyz="${-grip_bore_x} ${grip_bore_y} ${grip_mount_z}" rpy="${pi} 0 0"/>
+      <geometry>
+        <mesh filename="file://$(arg grip_mesh_dir)/$(arg grip_mesh)" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="printed"/>
+    </visual>
+    <!-- Just the pencil now, not a full-length rod: bottomed out against the
+         blind end of the bore and running to the tip at pen_from_roll. -->
+    <visual>
+      <origin xyz="0 0 ${(pencil_top + pen_from_roll) / 2}"/>
+      <geometry><cylinder radius="${pen_d / 2}" length="${pencil_len}"/></geometry>
+      <material name="graphite"/>
+    </visual>
+    <inertial>
+      <mass value="0.006"/>
+      <inertia ixx="1e-6" ixy="0" ixz="0" iyy="1e-6" iyz="0" izz="1e-7"/>
+    </inertial>
+  </link>
+  <link name="pen_tip"/>
+
+  <link name="paper_link">
+    <visual>
+      <origin xyz="0 0 0.0005"/>
+      <geometry><box size="${paper_w} ${paper_h} 0.001"/></geometry>
+      <material name="paper"/>
+    </visual>
+    <inertial>
+      <mass value="0.001"/>
+      <inertia ixx="1e-7" ixy="0" ixz="0" iyy="1e-7" iyz="0" izz="1e-7"/>
+    </inertial>
+  </link>
+
+  <joint name="base" type="revolute">
+    <axis xyz="0 0 1"/>
+    <limit effort="2" lower="-1.5708" upper="1.5708" velocity="3"/>
+    <origin xyz="0 0 0.01" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="braccio_base_link"/>
+    <dynamics damping="0.1" friction="0.001"/>
+  </joint>
+
+  <!-- The three pitch joints: no rpy, so servo 90 -> 0 rad -> in line with the
+       previous link, exactly like the hardware. -->
+  <joint name="shoulder" type="revolute">
+    <axis xyz="1 0 0"/>
+    <limit effort="2" lower="-1.309" upper="1.309" velocity="3"/>
+    <origin xyz="0 -0.002 0.072" rpy="0 0 0"/>
+    <parent link="braccio_base_link"/>
+    <child link="shoulder_link"/>
+    <dynamics damping="0.1" friction="0.001"/>
+  </joint>
+
+  <joint name="elbow" type="revolute">
+    <axis xyz="1 0 0"/>
+    <limit effort="2" lower="-1.5708" upper="1.5708" velocity="3"/>
+    <origin xyz="0 0 0.125" rpy="0 0 0"/>
+    <parent link="shoulder_link"/>
+    <child link="elbow_link"/>
+    <dynamics damping="0.1" friction="0.001"/>
+  </joint>
+
+  <joint name="wrist_vertical" type="revolute">
+    <axis xyz="1 0 0"/>
+    <limit effort="1" lower="-1.5708" upper="1.5708" velocity="3"/>
+    <origin xyz="0 0 0.125" rpy="0 0 0"/>
+    <parent link="elbow_link"/>
+    <child link="wrist_pitch_link"/>
+    <dynamics damping="0.1" friction="0.001"/>
+  </joint>
+
+  <joint name="wrist_rotation" type="revolute">
+    <axis xyz="0 0 -1"/>
+    <limit effort="1" lower="-1.5708" upper="1.5708" velocity="3"/>
+    <origin xyz="0 0 0.06" rpy="0 0 1.5708"/>
+    <parent link="wrist_pitch_link"/>
+    <child link="wrist_roll_link"/>
+    <dynamics damping="0.1" friction="0.001"/>
+  </joint>
+
+  <joint name="gripper" type="revolute">
+    <axis xyz="0 -1 0"/>
+    <limit effort="1" lower="0.1750" upper="1.2741" velocity="3"/>
+    <origin xyz="0.010 0 0.03" rpy="0 -0.2967 0"/>
+    <parent link="wrist_roll_link"/>
+    <child link="right_gripper_link"/>
+    <dynamics damping="0.1" friction="0.001"/>
+  </joint>
+
+  <joint name="left_gripper_mimic" type="revolute">
+    <axis xyz="0 1 0"/>
+    <mimic joint="gripper"/>
+    <limit effort="1" lower="1.2741" upper="2.3732" velocity="3"/>
+    <origin xyz="-0.010 0 0.03" rpy="0 3.4383 0"/>
+    <parent link="wrist_roll_link"/>
+    <child link="left_gripper_link"/>
+    <dynamics damping="0.1" friction="0.001"/>
+  </joint>
+
+  <joint name="camera_mount" type="fixed">
+    <parent link="wrist_roll_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.03 0 0.055" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="pen_mount" type="fixed">
+    <parent link="wrist_roll_link"/>
+    <child link="pen_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="pen_tip_joint" type="fixed">
+    <parent link="pen_link"/>
+    <child link="pen_tip"/>
+    <origin xyz="0 0 ${pen_from_roll}" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="paper_mount" type="fixed">
+    <parent link="world"/>
+    <child link="paper_link"/>
+    <origin xyz="${paper_cx} ${paper_cy} 0" rpy="0 0 0"/>
+  </joint>
+
+  <ros2_control name="GazeboSystem" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <joint name="base">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="shoulder">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="elbow">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="wrist_vertical">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="wrist_rotation">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+    <joint name="gripper">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(arg controllers_file)</parameters>
+    </plugin>
+  </gazebo>
+</robot>

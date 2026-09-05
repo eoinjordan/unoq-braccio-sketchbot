@@ -79,10 +79,16 @@ camera at it over Wi-Fi (`url:`) or USB (`serial:`) in `config/cameras.yaml`.
   <img src="docs/images/esp-eye.png" width="200" alt="Espressif ESP-EYE camera board">
 </p>
 
-The pencil is held by a printed **replacement Braccio finger** that clamps the
-tool with an M3 screw — print `hardware/pencil-grip/braccio_pencil_grip_8mm.stl`
-(pencils) or `_10mm.stl` (pens/markers). See
+The pencil is held by a printed part that clamps the tool with an M3 screw.
+Print `hardware/pencil-grip/braccio_pen_finger_8mm.stl` to keep the claws
+working alongside the pen, or `braccio_pencil_grip_8mm.stl` for the more rigid
+finger-replacement collar (`_10mm` for pens/markers). There is a matching
+`braccio_camera_finger.stl` and a small `braccio_wrist_camera_mount.stl`. See
 [hardware/pencil-grip/README.md](hardware/pencil-grip/README.md).
+
+After fitting one, set `links.wrist_pen_mm` in `config/workspace.yaml` and run
+`python scripts/check_workspace.py --suggest`: the pen length decides how big
+the drawable area is, and the planner silently skips moves it cannot solve.
 
 <p align="center">
   <img src="docs/images/printing-grip.jpg" width="360" alt="Slicing the pencil grip for 3D printing"><br>
@@ -221,6 +227,26 @@ The sketchbot drives the **real mesh Braccio** from the companion
 the pipeline changes:
 
 ```bash
+scripts/run_gazebo_e2e.sh                            # build, draw, and check it
+```
+
+That builds the ROS workspace, starts Gazebo headless, streams every planned
+move over `M`/`S`, records the simulated pen tip off TF, and compares what the
+arm drew with what was planned. `--gui` watches it happen.
+
+The simulated arm carries the **same printed part you bolt to the real Braccio**
+(`hardware/pencil-grip/braccio_pen_finger_8mm.stl`, loaded straight from
+`hardware/`), and the pen's path is painted onto the paper as gz markers while it
+draws, so the picture appears under the pencil in the 3D view. This is the pen
+tip measured off TF during a real Gazebo run — the drawing, not a re-simulation:
+
+![The pen tip tracing the caricature in Gazebo](docs/images/sketchbot-gazebo-ink.gif)
+
+Pick a different printed variant with `grip_mesh:=`, and remember to match the
+bore: `grip_mesh:=braccio_pen_finger_10mm.stl pen_diameter:=0.010`. Turn the live
+ink off with `ink:=false`. To drive it by hand:
+
+```bash
 ros2 launch braccio_sim sketchbot_gazebo.launch.py   # Gazebo + Braccio + bridge :8765
 .venv/bin/python -m sketch_artist.cli --image examples/sample_face_eoin.png --style none
 ```
@@ -244,8 +270,9 @@ meshes, so generate it locally rather than committing it):
 
 The suite covers config/geometry sanity (including a guard that the whole paper
 is reachable), the IK ↔ FK round trip, the planner, vectorizer, scenes,
-preview/gallery, the `M`/`S` protocol over a real socket, and a full
-end-to-end pipeline run against the simulator.
+preview/gallery, the `M`/`S` protocol over a real socket, a full end-to-end
+pipeline run against the simulator, and the printable STLs in `hardware/`
+(closed, manifold, single-shell, and consistent with `workspace.yaml`).
 
 ## Configuration
 
@@ -266,6 +293,15 @@ paper placement and put them in `config/workspace.yaml`. See
 > ⚠️ The inverse-kinematics servo mapping in `sketch_artist/kinematics.py` uses
 > configurable offsets that **must be tuned to your servos' zero positions**.
 > Start with `--dry-run`, then `--slow`, and keep the e-stop within reach.
+
+The Braccio is a serial arm, so the shoulder servo is an absolute elevation
+while the elbow and wrist servos measure the bend *relative* to the previous
+link (90° = in line). The IK follows that, and two limits fall out of it: the
+elbow and wrist only bend ±90°, so the shoulder-to-wrist distance has to stay
+between `hypot(l1, l2)` and `l1 + l2`, and the forearm can never point above
+horizontal while the pen stays vertical. The drawable region is therefore an
+annulus, not a disc — `scripts/check_workspace.py` shows it and sizes the paper
+box for you.
 
 ## How it maps to Edge Impulse
 
