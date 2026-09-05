@@ -38,7 +38,10 @@ def handle_command(command):
         return "ERR"
 
     try:
-        values = [int(value) for value in parts[1:]]
+        # float(): the sketchbot streams tenths of a degree, because a whole
+        # degree moves the pen ~3 mm at the paper. Whole-degree senders still
+        # parse fine.
+        values = [float(value) for value in parts[1:]]
     except ValueError:
         return "ERR"
 

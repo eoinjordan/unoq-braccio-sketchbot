@@ -231,6 +231,23 @@ def to_line_art(bgr: np.ndarray, drawing_cfg: dict) -> np.ndarray:
     caricature_cfg = drawing_cfg.get("caricature", {})
     size = int(cap_cfg.get("target_px", 512))
 
+    # Best path when the model is on disk: a small ONNX line-art generator that
+    # draws the eyes, nose and mouth the edge detectors miss. Falls through to
+    # the classic tracers when onnxruntime or the model file is absent.
+    neural_cfg = drawing_cfg.get("neural_lineart", {})
+    if neural_cfg.get("enabled", True):
+        from . import lineart_onnx
+        rect = detect_face_rect(
+            bgr,
+            cascade_path=str(portrait_cfg.get("face_cascade", "")),
+            scale_factor=float(portrait_cfg.get("scale_factor", 1.1)),
+            min_neighbors=int(portrait_cfg.get("min_neighbors", 4)),
+            min_size_px=int(portrait_cfg.get("min_size_px", 60)),
+        ) if portrait_cfg.get("detect_face", True) else None
+        art = lineart_onnx.line_art(bgr, rect, drawing_cfg, size)
+        if art is not None:
+            return art
+
     # Preferred path: segment the person so the hair/head outline is drawn and a
     # busy background is removed. Falls back to plain edge tracing on failure.
     if portrait_cfg.get("detect_face", True) and portrait_cfg.get("segment_person", True):

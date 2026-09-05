@@ -61,7 +61,8 @@ except ImportError:  # pragma: no cover - lets the file import without ROS deps
 
     def clamp_degrees(name: str, value: float) -> int:
         lo, hi = _LIMITS[name]
-        return max(lo, min(hi, int(round(value))))
+        # Keep fractions: the sketchbot sends tenths of a degree.
+        return max(lo, min(hi, float(value)))
 
     def servo_degrees_to_controller_position(name: str, value: float) -> float:
         if name == "gripper":
@@ -89,7 +90,11 @@ class BraccioBridge(Node):
         # 0.75 deg is ~2 mm at the pen tip with a 174 mm grip. Looser than
         # that and a travel move still reads as a stroke, because the pen
         # only lifts a few mm between strokes.
-        self.declare_parameter("position_tolerance_deg", 0.75)
+        # 0.15 deg is ~0.45 mm at the paper radius. The old 0.75 deg was
+        # ~2.3 mm -- on a 40 mm sheet the bridge would answer OK while the pen
+        # was still a twentieth of the drawing away from the commanded point,
+        # so the arm chased a moving target and rounded every corner off.
+        self.declare_parameter("position_tolerance_deg", 0.15)
         self.declare_parameter("move_timeout_s", 4.0)
 
         self.host = str(self.get_parameter("host").value)
@@ -186,7 +191,7 @@ class BraccioBridge(Node):
         """``S`` reply: measured servo degrees, falling back to the target."""
         measured = self.measured()
         source = measured if measured is not None else self.target
-        return "S " + " ".join(str(int(round(value))) for value in source)
+        return "S " + " ".join(f"{float(value):g}" for value in source)
 
     def stats_line(self) -> str:
         uptime_ms = int((time.monotonic() - self._started) * 1000)

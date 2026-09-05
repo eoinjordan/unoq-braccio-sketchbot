@@ -53,14 +53,22 @@ class UnreachableError(ValueError):
 
 @dataclass
 class ServoAngles:
-    base: int
-    shoulder: int
-    elbow: int
-    wrist_vertical: int
-    wrist_rotation: int
-    gripper: int
+    """Six servo angles in degrees.
 
-    def as_tuple(self) -> Tuple[int, int, int, int, int, int]:
+    These are floats on purpose. The paper sits ~175 mm from the base axis, so
+    one degree of base rotation sweeps the pen tip about 3 mm -- a 40 mm sheet
+    spans only 13 degrees. Rounded to whole degrees a portrait collapses into
+    about a dozen addressable columns and comes out as rubble; a tenth of a
+    degree is 0.3 mm and draws cleanly. See workspace.yaml motion.servo_decimals.
+    """
+    base: float
+    shoulder: float
+    elbow: float
+    wrist_vertical: float
+    wrist_rotation: float
+    gripper: float
+
+    def as_tuple(self) -> Tuple[float, float, float, float, float, float]:
         return (self.base, self.shoulder, self.elbow,
                 self.wrist_vertical, self.wrist_rotation, self.gripper)
 
@@ -74,6 +82,10 @@ class BraccioKinematics:
         self.wrist_pen = float(links["wrist_pen_mm"])
         self.cal = workspace_cfg["servo_calibration"]
         self.gripper_down = int(workspace_cfg["pen"]["down_gripper"])
+        # Decimal places kept on every emitted servo angle. 0 restores the old
+        # whole-degree protocol for firmware that cannot accept fractions.
+        self.decimals = int(
+            workspace_cfg.get("motion", {}).get("servo_decimals", 1))
 
     def link_elevations(self, x_mm: float, y_mm: float,
                         z_mm: float) -> Tuple[float, float, float]:
@@ -140,12 +152,12 @@ class BraccioKinematics:
 
         g = self.gripper_down if gripper is None else int(gripper)
         return ServoAngles(
-            base=_clamp_servo(raw["base"]),
-            shoulder=_clamp_servo(raw["shoulder"]),
-            elbow=_clamp_servo(raw["elbow"]),
-            wrist_vertical=_clamp_servo(raw["wrist_vertical"]),
-            wrist_rotation=int(self.cal["wrist_rotation"].get("fixed", 90)),
-            gripper=max(0, min(180, g)),
+            base=_clamp_servo(raw["base"], self.decimals),
+            shoulder=_clamp_servo(raw["shoulder"], self.decimals),
+            elbow=_clamp_servo(raw["elbow"], self.decimals),
+            wrist_vertical=_clamp_servo(raw["wrist_vertical"], self.decimals),
+            wrist_rotation=float(self.cal["wrist_rotation"].get("fixed", 90)),
+            gripper=float(max(0, min(180, g))),
         )
 
     def _servo(self, joint: str, geometric_deg: float) -> float:
@@ -154,5 +166,10 @@ class BraccioKinematics:
         return c.get("offset", 90) + c.get("sign", 1) * geometric_deg
 
 
-def _clamp_servo(value: float) -> int:
-    return int(round(max(0.0, min(180.0, value))))
+def _clamp_servo(value: float, decimals: int = 1) -> float:
+    """Clamp into the 0-180 servo range, keeping ``decimals`` places.
+
+    ``decimals=0`` returns a whole degree (as a float) and reproduces the
+    original behaviour exactly.
+    """
+    return round(max(0.0, min(180.0, value)), decimals)

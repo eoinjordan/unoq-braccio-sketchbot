@@ -65,6 +65,9 @@ ARGUMENTS = [
                          description="TCP port for the sketchbot M/S protocol."),
     DeclareLaunchArgument("host", default_value="127.0.0.1",
                          description="Bind address for the M/S server."),
+    DeclareLaunchArgument("position_tolerance", default_value="0.15",
+                          description="Degrees within which the bridge calls a "
+                                      "move arrived (~0.45 mm at the paper)."),
     DeclareLaunchArgument("move_time", default_value="0.25",
                          description="Seconds the arm is given to reach each point."),
     DeclareLaunchArgument("command_mode", default_value="trajectory",
@@ -207,6 +210,9 @@ def _setup(context, *args, **kwargs):
                      "port": LaunchConfiguration("port"),
                      "command_mode": LaunchConfiguration("command_mode"),
                      "move_time": LaunchConfiguration("move_time"),
+                     "position_tolerance_deg": ParameterValue(
+                         LaunchConfiguration("position_tolerance"),
+                         value_type=float),
                      "wait_for_motion": LaunchConfiguration("wait_for_motion"),
                  }]),
         ]),

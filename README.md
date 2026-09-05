@@ -43,10 +43,11 @@ Sketchbot wall.
 1. **Capture** – aim the **wrist-mounted camera** at the visitor (the arm moves
    to a "person" pose) and grab a frame.
 2. **Portrait → caricature line art** – detect the face, **segment the person**
-   (GrabCut) so the hair/head outline is drawn and a busy background dropped,
-   then trace the silhouette + interior features (glasses, eyes, beard) into
-   clean single-stroke line art. Optionally use an Edge Impulse model to gate
-   capture (e.g. "person present" / "smile").
+   (GrabCut) so a busy background is dropped, then draw the face with a small
+   **image-to-image model** (17 MB, CPU-only) that puts the eyes, nose and mouth
+   in — the features plain edge detection never finds. Falls back to the classic
+   Canny/DoG tracer when the model isn't on disk. Optionally use an Edge Impulse
+   model to gate capture (e.g. "person present" / "smile").
 3. **Vectorize** – turn the line art into ordered pen strokes.
 4. **Plan** – scale strokes into the paper workspace, order them to minimise
    pen travel, and insert pen-up / pen-down moves.
@@ -111,6 +112,14 @@ the drawable area is, and the planner silently skips moves it cannot solve.
 - Docker on the UNO Q (arm64), or Python 3.11+ with the `requirements.txt`
   installed. (OpenCV is pinned to **4.x** — 5.x dropped the bundled Haar
   cascades the face detector needs.)
+- Optional but strongly recommended: the **line-art model**, which is what makes
+  the drawing look like the person rather than like their haircut. 17 MB, CPU
+  only, and the pipeline falls back gracefully without it — see
+  [Getting a likeness](#getting-a-likeness):
+  ```bash
+  scripts/fetch_lineart_model.sh
+  .venv/bin/pip install onnxruntime
+  ```
 - A camera is optional for a first run (use `--image`). For live capture, plug
   in the wrist USB camera and set its VID:PID in `config/cameras.yaml`; list
   nodes with:
@@ -182,6 +191,84 @@ Or bring the whole thing up with Docker (cameras + arm reach + gallery):
 docker compose up -d --build
 docker compose logs -f sketchbot
 ```
+
+## Getting a likeness
+
+Two things stand between a photo and a drawing that actually looks like the
+person. Both are worth knowing about before you tune anything else.
+
+### 1. Draw the face, don't trace its edges
+
+Canny and DoG trace whatever has contrast. On a real photo that reliably finds
+the **hair silhouette** and the **glasses** — and reliably misses the **eyes,
+nose and mouth**, because those are soft gradients, not edges. You get a
+recognisable haircut wearing spectacles, and no face inside it.
+
+So the portrait step prefers a small **image-to-image model**: an
+*Informative Drawings* generator (Chan et al.), trained to produce the sparse,
+semantic strokes a person would actually draw. It is 17 MB, ~4.5 M parameters,
+about a second a frame on a CPU, and there is no GPU anywhere in the loop — the
+same code path runs on the UNO Q.
+
+```bash
+scripts/fetch_lineart_model.sh          # 17 MB, once
+.venv/bin/pip install onnxruntime
+```
+
+![Line art from the model](docs/images/likeness-lineart.png)
+
+GrabCut still runs, but now only as a **mask**: the model would otherwise
+faithfully draw whatever is behind you, and on a holiday snap that is an entire
+building. Everything is tunable under `neural_lineart:` in
+[`config/drawing.yaml`](config/drawing.yaml) — `threshold` for how much ink,
+`erode_mask_px` for how hard the background is cut back.
+
+> **No model on disk, or no `onnxruntime`?** The pipeline falls straight back to
+> the Canny/DoG tracer and keeps working. Nothing else has to change, which is
+> why CI stays dependency-free.
+
+### 2. Whole degrees are far too coarse to draw a face
+
+This one is worth internalising, because no amount of model quality survives it.
+
+The paper box sits about **175 mm** from the base axis. At that radius **one
+degree of base rotation sweeps the pen tip 3.05 mm**, so a 40 mm sheet spans
+just **13 degrees**. Send the arm whole-degree commands and the drawing has
+about a dozen addressable columns across its entire width.
+
+Here is the *same* plan — same line art, same 76 strokes, same 1111 pen-down
+points — rendered at whole degrees and at tenths of a degree:
+
+![Servo resolution decides whether it looks like anyone](docs/images/servo-resolution.png)
+
+Nothing about the picture changed. Only the resolution of the numbers on the
+wire did. So the `M` protocol carries **fractional degrees** end to end:
+
+- `kinematics.py` rounds to `motion.servo_decimals` places (default **1**)
+  instead of casting to `int`;
+- `arm_client.py` formats with `%g`, so whole degrees still go out as `90`;
+- the software simulator, the Gazebo bridge and the UNO Q agent all parse with
+  `float()`;
+- on real hardware the sketch writes **`writeMicroseconds()`** rather than
+  `write()` — `write()` takes whole degrees and would throw the fraction away
+  again at the last possible moment. A servo's pulse band is ~10.3 µs per
+  degree, so 0.1° is about 1 µs and comfortably resolvable.
+
+Set `servo_decimals: 0` in [`config/workspace.yaml`](config/workspace.yaml) if
+you are driving firmware that can only take whole degrees — you will get the
+left-hand picture, but it will work.
+
+> **Where this is verified.** The software simulator and a direct plot of the
+> planned moves both reproduce the likeness. The **Gazebo** trace currently does
+> not, and that is an open problem in the simulation rather than in the drawing
+> pipeline — see
+> [Known issue](sim/gazebo/README.md#known-issue-the-gazebo-trace-does-not-match-the-plan)
+> for what has already been ruled out.
+
+> **Rule of thumb.** Multiply your paper's distance from the base axis by
+> `π/180` to get the millimetres-per-degree you are working with. If that number
+> is bigger than the smallest feature you want to draw, your servo resolution is
+> the bottleneck — not your vision pipeline.
 
 ## Simulation (no hardware)
 
@@ -279,8 +366,8 @@ pipeline run against the simulator, and the printable STLs in `hardware/`
 | File                    | Purpose                                                        |
 | ----------------------- | ------------------------------------------------------------- |
 | `config/cameras.yaml`   | Camera source(s): USB webcam `usb_id`, or ESP-EYE `url`/`serial` |
-| `config/workspace.yaml` | Braccio link lengths, paper placement, pen up/down heights    |
-| `config/drawing.yaml`   | Edge/contour parameters, stroke simplification, stroke cap    |
+| `config/workspace.yaml` | Braccio link lengths, paper placement, pen heights, servo resolution |
+| `config/drawing.yaml`   | Line-art model, edge/contour parameters, stroke simplification and cap |
 | `config/branding.yaml`  | Edge Impulse colours, tagline, logo/QR paths, paper layout    |
 
 ## Calibration & safety
@@ -316,6 +403,7 @@ box for you.
 
 ```text
 sketch_artist/     Vision + planning + kinematics + FK + sim + arm client
+models/            Downloaded line-art model (fetch_lineart_model.sh; ignored)
 web/               Branded live gallery web server + static assets
 app_lab/           Arduino App Lab arm-control agent (deploy to the UNO Q)
 firmware/          ESP-EYE camera firmware (Wi-Fi/USB image source)
@@ -323,7 +411,7 @@ config/            Camera, workspace, drawing and branding configuration
 assets/            Edge Impulse postcard template + logo/QR slots
 hardware/          3D-printable Braccio pencil grip + camera mounts (STL/SCAD)
 sim/               Headless arm renderer + Gazebo M/S bridge (real model)
-scripts/           Camera listing and demo runner helpers
+scripts/           Camera listing, model fetch, and demo runner helpers
 tests/             pytest suite (pipeline, kinematics, sim, end-to-end)
 docs/              Architecture, calibration and safety notes
 examples/          A sample face image for dry runs

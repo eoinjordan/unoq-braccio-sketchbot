@@ -25,3 +25,6 @@ assets/qr.png
 # OS / editor
 .DS_Store
 .vscode/
+
+# Downloaded models (fetch with scripts/fetch_lineart_model.sh)
+models/

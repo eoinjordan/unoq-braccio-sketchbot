@@ -52,13 +52,16 @@ class SketchbotSimulator:
         self._lock = threading.Lock()
         self.polylines: List[Polyline] = []
         self._current: Polyline = []
-        self.last_angles: Optional[Tuple[int, ...]] = None
+        self.last_angles: Optional[Tuple[float, ...]] = None
         self.move_count = 0
 
     def apply_move(self, angles: Sequence[int]) -> PenTip:
         """Apply one servo-angle command and update the pen trajectory."""
         with self._lock:
-            servo = tuple(int(a) for a in angles)
+            # Float, not int: the M protocol carries fractional degrees, and
+            # truncating here would throw away the sub-millimetre precision the
+            # drawing depends on (1 deg of base ~= 3 mm at the paper).
+            servo = tuple(float(a) for a in angles)
             tip = self.fk.solve(servo)  # type: ignore[arg-type]
             self.last_angles = servo
             self.move_count += 1
@@ -84,8 +87,8 @@ class SketchbotSimulator:
             return sum(len(p) for p in self.polylines) + len(self._current)
 
     def status_line(self) -> str:
-        a = self.last_angles or (90, 90, 90, 90, 90, 90)
-        return "S " + " ".join(str(int(x)) for x in a)
+        a = self.last_angles or (90.0, 90.0, 90.0, 90.0, 90.0, 90.0)
+        return "S " + " ".join(f"{float(x):g}" for x in a)
 
     def render(self, out_path: str, px_per_mm: float = 4.0) -> str:
         """Render the drawn strokes onto the paper box as a PNG."""
@@ -125,7 +128,7 @@ class _Handler(socketserver.StreamRequestHandler):
             if cmd == "M":
                 parts = line.split()[1:7]
                 try:
-                    angles = tuple(int(float(p)) for p in parts)
+                    angles = tuple(float(p) for p in parts)
                     if len(angles) != 6:
                         raise ValueError("expected 6 joint angles")
                 except ValueError:

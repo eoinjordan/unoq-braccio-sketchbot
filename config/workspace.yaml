@@ -71,6 +71,14 @@ servo_calibration:
   wrist_rotation:  { fixed: 90 }
 
 motion:
+  # Decimal places kept on every servo angle sent over the M protocol.
+  #
+  # The paper sits ~175 mm from the base axis, so ONE DEGREE of base rotation
+  # sweeps the pen tip about 3 mm and a 40 mm sheet spans only ~13 degrees. At
+  # whole degrees a portrait has about a dozen addressable columns and comes out
+  # as rubble; at 0.1 deg (~0.3 mm) it draws cleanly. Set 0 for firmware that
+  # can only accept whole degrees.
+  servo_decimals: 1
   settle_s: 0.15           # pause after each pen-down point
   pen_change_s: 0.4        # pause on pen up/down transitions
 
@@ -78,7 +86,7 @@ planner:
   # When the next stroke starts within this distance of where the last one
   # ended, keep the pen down and draw straight through the gap instead of
   # lifting. Reduces slow pen up/down cycles. 0 = always lift between strokes.
-  join_gap_mm: 4.0
+  join_gap_mm: 0.8
 
 # Single-camera rig: with one wrist-mounted camera, the arm aims it at the
 # subject to capture, then at the paper to calibrate. Servo angles are

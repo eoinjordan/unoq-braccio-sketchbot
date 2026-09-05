@@ -73,6 +73,10 @@ point), `command_mode`, `wrist_pen`, `grip_mesh`, `ink`, `pen_down_z` /
   description ([`braccio_sketchbot.urdf.xacro`](urdf/braccio_sketchbot.urdf.xacro)).
 - **Joint order** (`base, shoulder, elbow, wrist_vertical, wrist_rotation,
   gripper`) matches the `M` command and the controller.
+- **`M` carries fractional degrees.** The bridge parses with `float()` and does
+  not round: at the paper radius one whole degree is ~3 mm, so rounding here
+  would quantise the drawing to about a dozen columns. See *Getting a likeness*
+  in the repo README.
 
 ## The printed grip, and ink you can see
 
@@ -137,6 +141,40 @@ The launch file also composes the stack itself instead of including
 (no headless mode) and starts `joint_state_simulator`, which publishes
 *commanded* angles onto `/joint_states` in competition with the
 `joint_state_broadcaster` publishing the real physics state.
+
+## Known issue: the Gazebo trace does not match the plan
+
+With the detailed line art the **plan is right and the Gazebo trace is not**.
+The same plan renders as a clean likeness in the software simulator and when
+plotted directly in paper millimetres; the pen path recorded off TF in Gazebo
+comes back as coarse rectangles and long straight runs instead.
+
+What has been ruled out, with evidence:
+
+- **Not the line art or the planner.** Windows and WSL produce the same plan
+  (73 strokes, 1156/1157 moves), and that plan plots correctly.
+- **Not servo quantisation.** The recorded path has 2761 distinct x values with
+  0.1 mm spacing.
+- **Not stroke segmentation.** 70 traced pen-down runs against 69 planned, and
+  no jump over 2 mm inside any run - the path is continuous.
+- **Not pen-up sag.** Joint-space interpolation between two pen-up poses at
+  opposite corners bottoms out at 7.98 mm, well clear of the 5 mm ink threshold.
+- **Not the arrival tolerance.** Tightening `position_tolerance` from 0.75 deg
+  to 0.15 deg changed the result not at all.
+
+What is left, and where to look next: the traced bounding box is **41.8 mm wide
+for a 40 mm commanded box** and offset about 2.5 mm in x, which looks like the
+controller overshooting each of ~1000 closely spaced targets rather than
+settling on them. Try a larger `move_time`, or the `arm_controller` gains in
+[`config/controllers.yaml`](config/controllers.yaml), before suspecting the
+kinematics.
+
+**The end-to-end check does not catch this**, which is its own bug: it scores
+each traced sample against the *nearest* planned segment, and with ~950 segments
+packed into 40 mm almost any point inside the face is within a fraction of a
+millimetre of something. It reported median 0.41 mm and PASS on the drawing
+above. A useful metric has to compare the traced path against the plan **in
+order** - Frechet distance, or per-stroke correspondence.
 
 ## Gotchas worth knowing
 

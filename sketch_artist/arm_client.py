@@ -56,10 +56,14 @@ class ArmClient:
             buf.extend(chunk)
         return buf.decode("ascii", errors="replace").strip()
 
-    def move(self, angles: Tuple[int, int, int, int, int, int]) -> str:
-        """Send an ``M`` move command and return the agent's reply."""
-        base, shoulder, elbow, wv, wr, grip = angles
-        return self._send(f"M {base} {shoulder} {elbow} {wv} {wr} {grip}")
+    def move(self, angles: Tuple[float, float, float, float, float, float]) -> str:
+        """Send an ``M`` move command and return the agent's reply.
+
+        Angles go out with fractional degrees when they have them (``%g`` drops
+        a trailing ``.0``), because whole degrees are ~3 mm at the paper and
+        far too coarse to draw a face. Agents parse with ``float()``.
+        """
+        return self._send("M " + " ".join(f"{float(a):g}" for a in angles))
 
     def status(self) -> str:
         """Query the current arm status line."""

@@ -7,7 +7,7 @@ void setup() {
   Bridge.begin();
   Bridge.provide("move_braccio", move_braccio);
   setupBraccioBridge();
-  move_braccio(90, 45, 180, 180, 90, 10);  // rest pose
+  move_braccio(90.0f, 45.0f, 180.0f, 180.0f, 90.0f, 10.0f);  // rest pose
 }
 
 void loop() {
