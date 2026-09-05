@@ -44,10 +44,32 @@ needed.
 ### `braccio_camera_finger` — camera on a finger, claws still working
 
 Built the same way: the untouched original finger with a camera cradle beside
-it. Sized for an **ESP-EYE** (see [`../../firmware/esp_eye_camera`](../../firmware/esp_eye_camera));
-change `camera_width` / `camera_height` / `camera_depth` for anything else.
+it, sized for an **ESP-EYE v2.1**
+(see [`../../firmware/esp_eye_camera`](../../firmware/esp_eye_camera)).
+
+![Camera finger](braccio_camera_finger_preview.png)
+
+The board's 41 mm axis runs **along** the finger, USB end up towards the wrist
+so the lead routes up the arm, camera end down towards the claw. The cradle is
+a windowed frame rather than a box: rails capture the board's long edges, the
+back plate carries a spine over the web with a pane either side, and the ESP32
+module on the board's **back** face sits in that window instead of propping the
+board up. Both rails are notched at the BOOT/RST plungers, the USB end is left
+open for the plug body, and a 2 mm peg picks up the board's single mounting
+hole to stop it creeping — the clamp screw is what actually holds it.
+
+That took the part from **10.40 cm³ to 6.85 cm³** and the envelope from
+46.4 × 25.2 mm to **38.0 × 17.8 mm**, which is the bare finger's own width: the
+cradle no longer makes the part wider at all. The web that carries the camera's
+mass into the blade went the other way on purpose, from a 4.5 mm strip bonded
+over 39 mm² to a 13 mm plate over ~147 mm².
+
+Change the `board_*` values for a different camera.
 
 ### `braccio_wrist_camera_mount` — the small wrist mount
+
+![Wrist camera mount](braccio_wrist_camera_mount_preview.png)
+
 
 Replaces the old `braccio_wrist_camera_bracket.stl` (a 56 × 44 × 49 mm,
 16.6 cm³ box) with a 31 × 32 × 44 mm, 5.3 cm³ hub-arm-plate, on the **same**
