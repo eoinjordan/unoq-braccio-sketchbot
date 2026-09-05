@@ -24,18 +24,24 @@ const int MAX_LIMITS[JOINTS] = {180, 165, 180, 180, 180, 110};
 const int SERVO_PINS[JOINTS] = {11, 10, 9, 6, 5, 3};
 const int SOFT_START_PIN = 12;
 
-// Standard hobby-servo pulse band, matching Servo.h's defaults.
-const float MIN_PULSE_US = 544.0f;
-const float MAX_PULSE_US = 2400.0f;
+// MUST match RoboServo's own defaults (ROBOSERVO_DEFAULT_MIN_PULSE_US /
+// _MAX_PULSE_US = 500/2500), because that is the band write(deg) used before
+// this change. Any other band silently shifts every joint and invalidates the
+// servo_calibration in config/workspace.yaml. The servos are attached with
+// these limits explicitly so a library default change cannot move the arm.
+const int MIN_PULSE_US = 500;
+const int MAX_PULSE_US = 2500;
 // Largest change applied per 20 ms tick, in degrees. Same slew rate as the
 // original one-degree-per-step loop.
 const float MAX_STEP_DEG = 1.0f;
 // Below this the joint is treated as arrived, so the loop always terminates.
 const float ARRIVED_DEG = 0.05f;
 
+// Same 0-180 -> pulse mapping RoboServo::write() applies, but keeping the
+// fraction: ~11.1 us per degree, so 0.1 deg is about 1 us.
 int pulseFor(float degrees) {
-  const float span = MAX_PULSE_US - MIN_PULSE_US;
-  return (int)(MIN_PULSE_US + (degrees / 180.0f) * span + 0.5f);
+  const float span = (float)(MAX_PULSE_US - MIN_PULSE_US);
+  return (int)((float)MIN_PULSE_US + (degrees / 180.0f) * span + 0.5f);
 }
 
 RoboServo base;
@@ -72,12 +78,12 @@ void writeCurrent() {
 void setupBraccioBridge() {
   pinMode(SOFT_START_PIN, OUTPUT);
   digitalWrite(SOFT_START_PIN, HIGH);
-  base.attach(SERVO_PINS[0]);
-  shoulder.attach(SERVO_PINS[1]);
-  elbow.attach(SERVO_PINS[2]);
-  wrist_ver.attach(SERVO_PINS[3]);
-  wrist_rot.attach(SERVO_PINS[4]);
-  gripper.attach(SERVO_PINS[5]);
+  base.attach(SERVO_PINS[0], MIN_PULSE_US, MAX_PULSE_US);
+  shoulder.attach(SERVO_PINS[1], MIN_PULSE_US, MAX_PULSE_US);
+  elbow.attach(SERVO_PINS[2], MIN_PULSE_US, MAX_PULSE_US);
+  wrist_ver.attach(SERVO_PINS[3], MIN_PULSE_US, MAX_PULSE_US);
+  wrist_rot.attach(SERVO_PINS[4], MIN_PULSE_US, MAX_PULSE_US);
+  gripper.attach(SERVO_PINS[5], MIN_PULSE_US, MAX_PULSE_US);
   writeCurrent();
 }
 

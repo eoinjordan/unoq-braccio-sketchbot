@@ -34,6 +34,35 @@ First start compiles the Zephyr sketch and flashes the MCU (a few minutes).
 Power the Braccio shield from its servo supply; keep the shield power switch as
 your e-stop. On boot the arm moves to a rest pose.
 
+**Re-flashing after a code change** (the sketch is only rebuilt when the copy in
+`~/ArduinoApps` changes, so copy it over again first):
+
+```bash
+cd ~/unoq-braccio-sketchbot && git pull
+arduino-app-cli app stop  ~/ArduinoApps/braccio_remote_agent
+rm -rf ~/ArduinoApps/braccio_remote_agent
+cp -r app_lab/braccio_remote_agent ~/ArduinoApps/
+arduino-app-cli app start ~/ArduinoApps/braccio_remote_agent   # recompiles + reflashes
+arduino-app-cli app logs  ~/ArduinoApps/braccio_remote_agent
+```
+
+Check the agent took the change by sending it a **fractional** angle — the reply
+should be `OK`, not `ERR`:
+
+```bash
+printf 'M 90.3 45 180 180 90 10
+S
+' | nc 127.0.0.1 8765
+```
+
+> **Angles are floats.** `move_braccio` takes `float` and the servos are driven
+> with `writeMicroseconds()`, because `write()` quantises to whole degrees — and
+> one degree is ~3 mm at the paper, which is far too coarse to draw a face. The
+> pulse band is pinned to RoboServo's own 500–2500 µs defaults, so the existing
+> `servo_calibration` in `config/workspace.yaml` stays valid.
+> If you are running older firmware that only accepts whole degrees, set
+> `motion.servo_decimals: 0` in `config/workspace.yaml`.
+
 Then draw from the repo root:
 
 ```bash
