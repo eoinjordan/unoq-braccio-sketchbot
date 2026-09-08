@@ -97,8 +97,13 @@ start`. Install or repair it with:
 mkdir -p ~/.config/systemd/user ~/bin
 cp app_lab/braccio_remote_agent/braccio-agent.service ~/.config/systemd/user/
 cp app_lab/braccio_remote_agent/braccio-agent-start.sh ~/bin/ && chmod +x ~/bin/braccio-agent-start.sh
-systemctl --user daemon-reload && systemctl --user enable --now braccio-agent.service
+cp app_lab/braccio_remote_agent/braccio-calibrate.service ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now braccio-agent.service braccio-calibrate.service
 ```
+
+`braccio-calibrate.service` brings up the pen calibration page on **:7200** after
+the agent (see *Calibrating the pen* in the repo README). It restarts itself if
+it falls over.
 
 **Park the arm before you power off.** At boot the MCU commands the rest pose
 `90 45 180 180 90 10`. If the arm is already there, boot moves nothing; if it is

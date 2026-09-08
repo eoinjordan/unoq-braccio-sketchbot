@@ -1,0 +1,14 @@
+[Unit]
+Description=Sketchbot pen calibration UI (http on :7200)
+After=braccio-agent.service
+Wants=braccio-agent.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/unoq-braccio-sketchbot
+ExecStart=/usr/bin/python3 -m web.calibrate
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
