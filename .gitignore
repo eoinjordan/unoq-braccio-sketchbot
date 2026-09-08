@@ -28,3 +28,9 @@ assets/qr.png
 
 # Downloaded models (fetch with scripts/fetch_lineart_model.sh)
 models/
+
+# Braccio meshes copied from the companion unoq-braccio repo. They are
+# GPL-3.0 and this repo is MIT, which is why the README says to fetch them
+# locally rather than vendor them. Ignored so a `git add -A` cannot pull them
+# into the tree by accident.
+hardware/braccio/
