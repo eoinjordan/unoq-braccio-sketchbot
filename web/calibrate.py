@@ -198,9 +198,14 @@ class Calibrator:
             raise ValueError(
                 f"{down:g} mm is below the reach band (min {lo} mm): that is "
                 f"through the paper, not on it.")
+        # Contact AT the ceiling leaves no room to lift the pen inside reach:
+        # up_z would have to leave the band. Same diagnosis as above it.
+        if down >= hi:
+            raise ValueError(
+                f"touching at {down:g} mm leaves no lift clearance inside the "
+                f"reach band (max {hi} mm). Shorten the pen so the tip stands "
+                f"27 mm below the collar; the band then reopens to ~0-8 mm.")
         up = round(min(down + 5.0, float(hi)), 1)
-        if up <= down:
-            up = round(down + 2.0, 1)
         _write_config_keys({"down_z_mm": down, "up_z_mm": up})
         self.reload()
         return {"ok": True, "down_z_mm": down, "up_z_mm": up}
