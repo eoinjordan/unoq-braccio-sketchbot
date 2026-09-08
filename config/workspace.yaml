@@ -21,7 +21,10 @@ links:
   # + 57 mm  mounting face -> bottom of the printed collar
   # + 27 mm  pencil proud of the collar
   # The grip's OpenSCAD source echoes this number when you render it.
-  wrist_pen_mm: 174
+  # MEASURED on this rig with web/calibrate (ladder from +2 to -12 mm: only the
+  # lowest dashes inked, contact at ~-11 mm from the 174 design length). This
+  # ballpoint sits ~11 mm shorter in the collar than the design intends.
+  wrist_pen_mm: 163
 
 # Paper drawing area, described in the arm base frame:
 #   origin = the near-left corner of the drawing box,
@@ -40,13 +43,16 @@ links:
 # drawable box, because it brings the wrist point back down relative to the
 # paper. See docs/calibration.md.
 paper:
-  origin_x_mm: 155
+  # 159, not 155: with the 163 mm pen the wrist has to drop lower to touch the
+  # sheet and the near edge at x=155 runs into the wrist/elbow limits (7 of
+  # 121 points). 4 mm further out the whole 40 mm box is reachable at z=0.
+  origin_x_mm: 159
   origin_y_mm: -40
   width_mm: 40             # drawing box size along +x
   height_mm: 40            # drawing box size along +y
 
 pen:
-  down_z_mm: 3             # pencil tip height while drawing (touching paper)
+  down_z_mm: 0             # pencil tip height while drawing (touching paper)
   up_z_mm: 8               # travel height for pen-up moves between strokes.
                            # Keep BOTH within 0-8 mm: above 8 the far corners of
                            # the paper leave the arm's reach and the IK clamps.
