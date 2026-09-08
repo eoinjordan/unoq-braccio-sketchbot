@@ -47,7 +47,7 @@ paper:
 
 pen:
   down_z_mm: 6             # pencil tip height while drawing (touching paper)
-  up_z_mm: 8               # travel height for pen-up moves between strokes.
+  up_z_mm: 14              # travel height for pen-up moves between strokes.
                            # Every extra mm of lift raises the wrist point and
                            # shrinks the drawable area (scripts/check_workspace.py
                            # shows by how much); 6-10 mm clears the paper fine.
