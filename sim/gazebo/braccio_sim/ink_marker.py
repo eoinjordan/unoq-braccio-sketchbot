@@ -107,6 +107,9 @@ class InkMarkerNode(Node):
         # Gazebo's GUI can still be coming up when this node starts, so a first
         # failure is not proof the service is missing.
         self.declare_parameter("startup_grace_s", 20.0)
+        # Longest gap between retries once the service goes quiet. The node
+        # never gives up permanently: the GUI stalling is not the GUI dying.
+        self.declare_parameter("retry_ceiling_s", 5.0)
 
         self.frame = str(self.get_parameter("frame").value)
         self.world_frame = str(self.get_parameter("world_frame").value)
@@ -121,6 +124,8 @@ class InkMarkerNode(Node):
         self.min_interval = float(
             self.get_parameter("min_publish_interval_s").value)
         self.grace = float(self.get_parameter("startup_grace_s").value)
+        self.retry_ceiling_s = float(
+            self.get_parameter("retry_ceiling_s").value)
         rgb = [float(v) for v in self.get_parameter("ink_rgb").value]
         self._material = self._material_block(rgb)
 
@@ -241,13 +246,21 @@ class InkMarkerNode(Node):
                 # Not acknowledged, so those strokes still need sending.
                 self._dirty.set()
                 failures += 1
-                # One timed-out call is not a dead GUI - the render thread is
-                # busy under software rendering. Only a run of them is.
+                # Do NOT latch off here. Under software rendering the GUI's
+                # render thread stalls for seconds at a time - long enough for
+                # several calls in a row to time out - and a drawing that gave
+                # up at the first rough patch painted a third of the picture and
+                # stayed off for the rest of the run. Back off instead and keep
+                # trying, so ink resumes by itself when the GUI catches up.
                 if failures >= 3 and time.monotonic() - started > self.grace:
-                    self._disable(
-                        f"{self.service} stopped answering (the Gazebo GUI has "
-                        "probably been closed); live ink is off.")
-                    return
+                    if failures == 3:
+                        self.get_logger().warning(
+                            f"{self.service} is not answering; backing off and "
+                            "retrying (ink will resume if the GUI recovers).")
+                    backoff = min(self.min_interval * 2 ** (failures - 2),
+                                  self.retry_ceiling_s)
+                    self._stop.wait(backoff)
+                    continue
             self._stop.wait(self.min_interval)
 
     def _snapshot(self) -> Tuple[List[str], int]:
