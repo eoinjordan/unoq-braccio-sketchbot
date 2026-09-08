@@ -208,6 +208,25 @@ def run(args) -> int:
     return 0
 
 
+# The pose the MCU sketch commands at power-on (UnoQBraccioBridge.cpp). Parking
+# here before shutdown means the next boot moves nothing, so the servo inrush
+# that used to brown the board out never happens.
+REST_POSE = (90.0, 45.0, 180.0, 180.0, 90.0, 10.0)
+
+
+def _park(host: str, port: int) -> int:
+    """Ramp the arm to the firmware rest pose so it is safe to power off."""
+    try:
+        with ArmClient(host=host, port=port) as arm:
+            print(f"Parking at the firmware rest pose via {host}:{port} ...")
+            arm.move_ramped(REST_POSE, max_step_deg=3.0, dwell_s=0.05)
+            print(f"  parked at {arm.status_angles()}; safe to power off.")
+    except OSError as exc:
+        print(f"  ! arm agent unreachable at {host}:{port}: {exc}")
+        return 1
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Braccio sketchbot pipeline.")
     parser.add_argument("--image", help="Draw from an image file instead of the camera.")
@@ -235,7 +254,13 @@ def main(argv=None) -> int:
                         help="List the available caricature styles and exit.")
     parser.add_argument("--host", default="127.0.0.1", help="Arm agent host.")
     parser.add_argument("--port", type=int, default=8765, help="Arm agent port.")
+    parser.add_argument("--park", action="store_true",
+                        help="Ramp the arm to the firmware rest pose and exit. Do "
+                             "this before powering off, so the next boot moves "
+                             "nothing.")
     args = parser.parse_args(argv)
+    if args.park:
+        return _park(args.host, args.port)
 
     if args.list_styles:
         scenes_cfg = cfg.load_all()["scenes"]

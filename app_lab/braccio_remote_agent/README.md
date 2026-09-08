@@ -80,6 +80,44 @@ Then draw from the repo root:
     --image examples/sample_face_eoin.png --style none --slow
 ```
 
+## Starting on boot, and shutting down safely
+
+The agent comes up on its own at boot via a **user** systemd unit (no root
+needed, because user lingering is on for `arduino`):
+
+```bash
+systemctl --user status braccio-agent.service     # is it up?
+journalctl --user -u braccio-agent.service -b     # what did it do this boot?
+```
+
+It waits for the App Lab daemon on `:8800`, then runs `arduino-app-cli app
+start`. Install or repair it with:
+
+```bash
+mkdir -p ~/.config/systemd/user ~/bin
+cp app_lab/braccio_remote_agent/braccio-agent.service ~/.config/systemd/user/
+cp app_lab/braccio_remote_agent/braccio-agent-start.sh ~/bin/ && chmod +x ~/bin/braccio-agent-start.sh
+systemctl --user daemon-reload && systemctl --user enable --now braccio-agent.service
+```
+
+**Park the arm before you power off.** At boot the MCU commands the rest pose
+`90 45 180 180 90 10`. If the arm is already there, boot moves nothing; if it is
+folded over the paper, every joint sweeps to it and the inrush can reset the
+board. The pipeline parks it for you:
+
+```bash
+python -m sketch_artist.cli --park      # ramps to the rest pose, then exit
+```
+
+## The pen
+
+Use the same standard ballpoint every time and set it once: the tip should
+stand **27 mm below the bottom edge of the printed collar**. That is the length
+`links.wrist_pen_mm: 174` in `config/workspace.yaml` describes, and the whole
+40 mm paper is only reachable in a band 8 mm deep above the sheet, so a pen
+even 10 mm too long cannot be rescued in software — it presses at every height
+the arm can reach. Measure it with a ruler; don't eyeball it.
+
 ## Servo pin map
 
 Braccio shield defaults: base `11`, shoulder `10`, elbow `9`, wrist_vertical `6`,

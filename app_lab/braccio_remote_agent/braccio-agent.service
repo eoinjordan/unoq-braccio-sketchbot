@@ -1,0 +1,12 @@
+[Unit]
+Description=Sketchbot Braccio arm agent (M/S on :8765)
+After=default.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/bin/braccio-agent-start.sh
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target
