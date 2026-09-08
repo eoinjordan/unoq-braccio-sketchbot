@@ -46,8 +46,10 @@ paper:
   height_mm: 40            # drawing box size along +y
 
 pen:
-  down_z_mm: 6             # pencil tip height while drawing (touching paper)
-  up_z_mm: 14              # travel height for pen-up moves between strokes.
+  down_z_mm: 2             # pencil tip height while drawing (touching paper)
+  up_z_mm: 8               # travel height for pen-up moves between strokes.
+                           # Keep BOTH within 0-8 mm: above 8 the far corners of
+                           # the paper leave the arm's reach and the IK clamps.
                            # Every extra mm of lift raises the wrist point and
                            # shrinks the drawable area (scripts/check_workspace.py
                            # shows by how much); 6-10 mm clears the paper fine.

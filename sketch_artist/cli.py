@@ -76,7 +76,10 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
         for m in moves:
             z = down_z if m.pen_down else up_z
             try:
-                angles = kin.solve(m.x_mm, m.y_mm, z)
+                # strict: without it the IK silently CLAMPS an out-of-reach pose
+                # and the pen draws in the wrong place - or jams against the
+                # paper at a joint limit - instead of the move being skipped.
+                angles = kin.solve(m.x_mm, m.y_mm, z, strict=True)
             except UnreachableError:
                 skipped += 1
                 continue
