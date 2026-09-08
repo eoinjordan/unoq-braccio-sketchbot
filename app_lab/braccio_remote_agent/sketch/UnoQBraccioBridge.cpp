@@ -36,6 +36,13 @@ const int MAX_PULSE_US = 2500;
 const float MAX_STEP_DEG = 1.0f;
 // Below this the joint is treated as arrived, so the loop always terminates.
 const float ARRIVED_DEG = 0.05f;
+// Power-on sequencing. Attaching all six servos and commanding them together
+// slams every joint from wherever the arm physically is to the rest pose at
+// once; that inrush browns the board out and hard-resets it, and since the arm
+// is still mispositioned on the next boot it does it again. Bringing the rail
+// up first and then energising one joint at a time spreads the peak draw.
+const int SOFT_START_MS = 600;   // let the servo rail settle before any torque
+const int STAGGER_MS = 180;      // gap between energising each joint
 
 // Same 0-180 -> pulse mapping RoboServo::write() applies, but keeping the
 // fraction: ~11.1 us per degree, so 0.1 deg is about 1 us.
@@ -76,15 +83,23 @@ void writeCurrent() {
 }  // namespace
 
 void setupBraccioBridge() {
+  // Hold the servo rail down briefly, then bring it up and let it settle before
+  // anything draws torque.
   pinMode(SOFT_START_PIN, OUTPUT);
+  digitalWrite(SOFT_START_PIN, LOW);
+  delay(50);
   digitalWrite(SOFT_START_PIN, HIGH);
-  base.attach(SERVO_PINS[0], MIN_PULSE_US, MAX_PULSE_US);
-  shoulder.attach(SERVO_PINS[1], MIN_PULSE_US, MAX_PULSE_US);
-  elbow.attach(SERVO_PINS[2], MIN_PULSE_US, MAX_PULSE_US);
-  wrist_ver.attach(SERVO_PINS[3], MIN_PULSE_US, MAX_PULSE_US);
-  wrist_rot.attach(SERVO_PINS[4], MIN_PULSE_US, MAX_PULSE_US);
-  gripper.attach(SERVO_PINS[5], MIN_PULSE_US, MAX_PULSE_US);
-  writeCurrent();
+  delay(SOFT_START_MS);
+
+  // One joint at a time, NOT all six together - see SOFT_START_MS above. The
+  // heavy joints come up first while the rail is freshest.
+  RoboServo *servos[JOINTS] = {&base, &shoulder, &elbow,
+                               &wrist_ver, &wrist_rot, &gripper};
+  for (int i = 0; i < JOINTS; i++) {
+    servos[i]->attach(SERVO_PINS[i], MIN_PULSE_US, MAX_PULSE_US);
+    servos[i]->writeMicroseconds(pulseFor(current[i]));
+    delay(STAGGER_MS);
+  }
 }
 
 bool move_braccio(

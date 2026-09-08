@@ -34,6 +34,16 @@ First start compiles the Zephyr sketch and flashes the MCU (a few minutes).
 Power the Braccio shield from its servo supply; keep the shield power switch as
 your e-stop. On boot the arm moves to a rest pose.
 
+> **Before you flash, park the arm.** The MCU energises the servos at boot and
+> holds the rest pose `90 45 180 180 90 10`. If the arm is physically far from
+> that — folded over the paper, say — every joint drives to it at once and the
+> inrush browns the board out and hard-resets it, which then repeats on the next
+> boot because the arm is still mispositioned. Either switch the shield's servo
+> power off for the flash, or move the arm by hand to roughly that pose first.
+> The firmware now brings the rail up over ~0.6 s and energises the joints one
+> at a time to keep the peak down, but it cannot help if the arm has to make a
+> full-travel sweep to reach the rest pose.
+
 **Re-flashing after a code change** (the sketch is only rebuilt when the copy in
 `~/ArduinoApps` changes, so copy it over again first):
 
