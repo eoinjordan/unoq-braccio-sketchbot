@@ -6,6 +6,7 @@
 #   ./scripts/run_demo.sh sim            # draw the sample on the software sim
 #   ./scripts/run_demo.sh agent          # run the standalone sim arm agent :8765
 #   ./scripts/run_demo.sh draw           # full capture + draw
+#   ./scripts/run_demo.sh calibrate      # pen calibration UI (:7200)
 #   ./scripts/run_demo.sh gallery        # start the live gallery (:7100)
 #   ./scripts/run_demo.sh test           # run the pytest suite
 #
@@ -99,6 +100,11 @@ PYDEPS
     ensure_venv
     "$PY" -m sketch_artist.cli "${@:2}"
     ;;
+  calibrate)
+    # Pen calibration UI on :7200 - jog the pen to the paper, mark contact,
+    # set the pen length. Needs the arm agent on :8765.
+    "$PY" -m web.calibrate
+    ;;
   gallery)
     ensure_venv
     "$PY" -m web.server
@@ -112,7 +118,7 @@ PYDEPS
     "$PY" -m pytest "${@:2}"
     ;;
   *)
-    echo "usage: $0 {setup|dry|sim|agent|draw|gallery|test}" >&2
+    echo "usage: $0 {setup|dry|sim|agent|draw|calibrate|gallery|test}" >&2
     exit 2
     ;;
 esac

@@ -370,6 +370,37 @@ pipeline run against the simulator, and the printable STLs in `hardware/`
 | `config/drawing.yaml`   | Line-art model, edge/contour parameters, stroke simplification and cap |
 | `config/branding.yaml`  | Edge Impulse colours, tagline, logo/QR paths, paper layout    |
 
+## Calibrating the pen (web UI)
+
+The two numbers the drawing depends on are the pen's length and where the paper
+surface is, and nothing can measure them for you. There is a page for exactly
+that — open it on a phone next to the arm:
+
+```bash
+./scripts/run_demo.sh calibrate        # http://<uno-q>:7200
+```
+
+1. **Hover over paper** — the arm ramps to the paper centre at the top of the
+   reach band.
+2. **Step down** in 2 / 1 / 0.5 mm until the tip *just* kisses the sheet. The
+   green bar is the band of heights at which *every* paper point is reachable;
+   with the stock 174 mm pen it is about 0–8 mm, and it is the whole reason a
+   pen that is too long cannot be rescued in software.
+3. **Mark contact** — writes `pen.down_z_mm` (and `up_z_mm` 5 mm above, capped
+   at the band) into `config/workspace.yaml`, comments intact.
+4. **Draw test square** — the acceptance check, at the height you just set.
+5. **Park** before you power off, so the next boot moves nothing.
+
+**Pen length.** Measure it with a ruler — wrist-rotation axis to tip, which
+with the printed grip is the tip standing **27 mm below the collar** = 174 mm —
+and *Set from ruler*. If you cannot measure, *Derive from contact* treats the
+current height as the true surface and folds the difference into
+`links.wrist_pen_mm`; it costs reach, because a longer modelled pen lifts the
+wrist, so the ruler is the better answer.
+
+Do this once for a baseline, then again whenever the pen or the paper moves.
+Same ballpoint every time and the numbers hold.
+
 ## Calibration & safety
 
 Drawing is only as good as the geometry. Measure your arm's link lengths and
@@ -404,14 +435,14 @@ box for you.
 ```text
 sketch_artist/     Vision + planning + kinematics + FK + sim + arm client
 models/            Downloaded line-art model (fetch_lineart_model.sh; ignored)
-web/               Branded live gallery web server + static assets
+web/               Live gallery + pen calibration web UIs (stdlib http.server)
 app_lab/           Arduino App Lab arm-control agent (deploy to the UNO Q)
 firmware/          ESP-EYE camera firmware (Wi-Fi/USB image source)
 config/            Camera, workspace, drawing and branding configuration
 assets/            Edge Impulse postcard template + logo/QR slots
 hardware/          3D-printable Braccio pencil grip + camera mounts (STL/SCAD)
 sim/               Headless arm renderer + Gazebo M/S bridge (real model)
-scripts/           Camera listing, model fetch, and demo runner helpers
+scripts/           Camera listing, model fetch, calibration and demo runner helpers
 tests/             pytest suite (pipeline, kinematics, sim, end-to-end)
 docs/              Architecture, calibration and safety notes
 examples/          A sample face image for dry runs

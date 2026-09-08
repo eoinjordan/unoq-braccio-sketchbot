@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sketchbot pen calibration</title>
+<style>
+  :root { --ink:#0b1221; --bg:#f6f7f9; --card:#fff; --line:#d9dde3;
+          --go:#1c5c34; --stop:#b3261e; --warn:#8a5a00; --muted:#5f6b7a; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+         font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:560px; margin:0 auto; padding:14px; }
+  h1 { font-size:1.25rem; margin:4px 0 12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px;
+          padding:12px 14px; margin-bottom:12px; }
+  .card h2 { font-size:0.95rem; margin:0 0 8px; color:var(--muted);
+             text-transform:uppercase; letter-spacing:.04em; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  button { font:inherit; font-weight:600; padding:12px 14px; border-radius:8px;
+           border:1px solid var(--line); background:#fff; cursor:pointer; min-width:64px; }
+  button:active { transform:translateY(1px); }
+  button.big { flex:1; padding:16px; font-size:1.05rem; }
+  button.go { background:var(--go); color:#fff; border-color:var(--go); }
+  button.stop { background:var(--stop); color:#fff; border-color:var(--stop); }
+  button.warn { background:#fff3d6; border-color:#e5c07b; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .z { font-size:2.4rem; font-weight:700; text-align:center; margin:6px 0; }
+  .z small { font-size:1rem; font-weight:500; color:var(--muted); }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 12px; font-family:ui-monospace,Menlo,monospace; font-size:.9rem; }
+  .kv b { color:var(--muted); font-weight:500; }
+  input[type=number] { font:inherit; padding:10px; width:110px; border:1px solid var(--line); border-radius:8px; }
+  .status { min-height:1.4em; font-size:.9rem; color:var(--muted); }
+  .status.err { color:var(--stop); }
+  .status.ok { color:var(--go); }
+  .band { height:10px; background:#e4e8ee; border-radius:5px; position:relative; margin:8px 0 4px; }
+  .band .ok { position:absolute; top:0; bottom:0; background:#bfe6cc; border-radius:5px; }
+  .band .cur { position:absolute; top:-4px; width:4px; height:18px; background:var(--ink); border-radius:2px; }
+  .hint { font-size:.85rem; color:var(--muted); margin:6px 0 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pen calibration</h1>
+
+  <div class="card">
+    <h2>Arm</h2>
+    <div class="row">
+      <button class="big go" id="hover">Hover over paper</button>
+      <button class="big stop" id="park">Park (safe to power off)</button>
+    </div>
+    <div class="status" id="agent"></div>
+  </div>
+
+  <div class="card">
+    <h2>Height</h2>
+    <div class="z"><span id="z">–</span> <small>mm commanded</small></div>
+    <div class="band"><div class="ok" id="bandok"></div><div class="cur" id="bandcur"></div></div>
+    <div class="hint" id="bandtext"></div>
+    <div class="row" style="margin-top:10px">
+      <button data-dz="-2">▼ 2</button>
+      <button data-dz="-1">▼ 1</button>
+      <button data-dz="-0.5">▼ 0.5</button>
+      <button data-dz="0.5">▲ 0.5</button>
+      <button data-dz="1">▲ 1</button>
+      <button data-dz="2">▲ 2</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <span style="color:var(--muted)">nudge</span>
+      <button data-dx="-2">x −2</button><button data-dx="2">x +2</button>
+      <button data-dy="-2">y −2</button><button data-dy="2">y +2</button>
+    </div>
+    <p class="hint">Step the pen down until the tip <em>just</em> kisses the paper, then mark it.
+       If it still presses at the top of the green band, the pen is too long — shorten it or use <em>Derive</em>.</p>
+    <div class="row" style="margin-top:8px">
+      <button class="big go" id="mark">Mark contact → set drawing height</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Pen length</h2>
+    <div class="kv">
+      <b>wrist_pen_mm</b><span id="penlen">–</span>
+      <b>down_z_mm</b><span id="downz">–</span>
+      <b>up_z_mm</b><span id="upz">–</span>
+      <b>reach band</b><span id="bandkv">–</span>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input type="number" id="peninput" step="0.5" min="120" max="230">
+      <button id="setpen">Set from ruler</button>
+      <button class="warn" id="derive">Derive from contact</button>
+    </div>
+    <p class="hint">Ruler: wrist-rotation axis to the tip. With the printed grip that is the tip
+       standing <b>27&nbsp;mm below the collar</b> = 174&nbsp;mm. Longer pens shrink the reach band.</p>
+  </div>
+
+  <div class="card">
+    <h2>Check</h2>
+    <div class="row">
+      <button class="big" id="square">Draw test square at current height</button>
+    </div>
+    <div class="status" id="msg"></div>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let state = null, busy = false;
+
+async function api(path, body) {
+  if (busy) return;
+  busy = true; setMsg('working…', '');
+  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  try {
+    const r = await fetch(path, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)} : {method:'POST'});
+    const j = await r.json();
+    if (!r.ok || j.ok === false) setMsg(j.error || ('HTTP ' + r.status), 'err');
+    else setMsg(summ(path, j), 'ok');
+  } catch (e) { setMsg(String(e), 'err'); }
+  finally {
+    busy = false;
+    document.querySelectorAll('button').forEach(b => b.disabled = false);
+    refresh();
+  }
+}
+function summ(path, j) {
+  if (path.endsWith('mark_contact')) return `saved down_z=${j.down_z_mm} mm, up_z=${j.up_z_mm} mm`;
+  if (path.endsWith('set_pen_length') || path.endsWith('derive_pen_length'))
+    return `wrist_pen_mm=${j.wrist_pen_mm}; reach band now ${j.band.lo}..${j.band.hi} mm`;
+  if (path.endsWith('square')) return `square traced: ${j.points} points at ${j.down_z_mm} mm`;
+  if (path.endsWith('park')) return 'parked at the firmware rest pose';
+  if (path.endsWith('hover')) return `hovering at ${j.z} mm over the paper centre`;
+  return 'ok';
+}
+function setMsg(t, cls) { const m = $('msg'); m.textContent = t; m.className = 'status ' + cls; }
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/state'); state = await r.json();
+  } catch (e) { $('agent').textContent = 'UI server unreachable'; return; }
+  const a = $('agent');
+  a.textContent = state.agent === 'connected'
+    ? 'arm agent connected' + (state.pose ? '  ·  pose ' + state.pose.map(v => v.toFixed(1)).join(' ') : '')
+    : 'arm agent ' + state.agent;
+  a.className = 'status ' + (state.agent === 'connected' ? 'ok' : 'err');
+  $('z').textContent = state.target.z.toFixed(1);
+  $('penlen').textContent = state.config.wrist_pen_mm;
+  $('downz').textContent  = state.config.down_z_mm;
+  $('upz').textContent    = state.config.up_z_mm;
+  $('bandkv').textContent = `${state.band.lo} .. ${state.band.hi} mm (every paper point reachable)`;
+  if (!$('peninput').value) $('peninput').value = state.config.wrist_pen_mm;
+  // band bar spans -3..20 mm
+  const lo = -3, hi = 20, pct = v => Math.max(0, Math.min(100, (v - lo) / (hi - lo) * 100));
+  $('bandok').style.left  = pct(state.band.lo) + '%';
+  $('bandok').style.width = (pct(state.band.hi) - pct(state.band.lo)) + '%';
+  $('bandcur').style.left = pct(state.target.z) + '%';
+  $('bandtext').textContent = state.target.z > state.band.hi
+    ? 'above the band: not every paper point is reachable here'
+    : state.target.z < state.band.lo ? 'below the band: this is through the paper' : 'inside the reach band';
+  if (state.last_error) setMsg(state.last_error, 'err');
+}
+
+$('hover').onclick  = () => api('/api/hover');
+$('park').onclick   = () => api('/api/park');
+$('mark').onclick   = () => api('/api/mark_contact');
+$('square').onclick = () => api('/api/square');
+$('setpen').onclick = () => api('/api/set_pen_length', {wrist_pen_mm: parseFloat($('peninput').value)});
+$('derive').onclick = () => { if (confirm('Treat the current height as contact and fold it into the pen length?')) api('/api/derive_pen_length'); };
+document.querySelectorAll('[data-dz]').forEach(b => b.onclick = () => api('/api/jog', {dz: parseFloat(b.dataset.dz)}));
+document.querySelectorAll('[data-dx]').forEach(b => b.onclick = () => api('/api/jog', {dx: parseFloat(b.dataset.dx)}));
+document.querySelectorAll('[data-dy]').forEach(b => b.onclick = () => api('/api/jog', {dy: parseFloat(b.dataset.dy)}));
+
+refresh(); setInterval(() => { if (!busy) refresh(); }, 3000);
+</script>
+</body>
+</html>
