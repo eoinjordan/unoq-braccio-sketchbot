@@ -46,7 +46,7 @@ paper:
   height_mm: 40            # drawing box size along +y
 
 pen:
-  down_z_mm: 2             # pencil tip height while drawing (touching paper)
+  down_z_mm: 3             # pencil tip height while drawing (touching paper)
   up_z_mm: 8               # travel height for pen-up moves between strokes.
                            # Keep BOTH within 0-8 mm: above 8 the far corners of
                            # the paper leave the arm's reach and the IK clamps.
