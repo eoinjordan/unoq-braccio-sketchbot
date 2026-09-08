@@ -184,7 +184,23 @@ class Calibrator:
         moves never leave the paper's reachable envelope.
         """
         down = round(self.z, 1)
-        up = round(min(down + 5.0, float(self.band[1])), 1) if self.band[1] > down else down + 5.0
+        lo, hi = self.band
+        # Contact ABOVE the band is not a drawing height, it is a diagnosis: the
+        # pen is (z - band) mm longer than the model. Writing it as down_z would
+        # put most of the paper out of reach and the planner would skip strokes.
+        if down > hi:
+            raise ValueError(
+                f"touching at {down:g} mm is above the reach band (max {hi} mm): "
+                f"the pen is about {down - hi:g} mm too long. Shorten it so the "
+                f"tip stands 27 mm below the collar, or press 'Derive from "
+                f"contact' to fold it into wrist_pen_mm instead.")
+        if down < lo:
+            raise ValueError(
+                f"{down:g} mm is below the reach band (min {lo} mm): that is "
+                f"through the paper, not on it.")
+        up = round(min(down + 5.0, float(hi)), 1)
+        if up <= down:
+            up = round(down + 2.0, 1)
         _write_config_keys({"down_z_mm": down, "up_z_mm": up})
         self.reload()
         return {"ok": True, "down_z_mm": down, "up_z_mm": up}
