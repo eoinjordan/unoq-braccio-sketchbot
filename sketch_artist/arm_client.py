@@ -5,13 +5,15 @@ Speaks the same line protocol as the ``unoq-braccio`` project:
     ``M <base> <shoulder> <elbow> <wrist_v> <wrist_rot> <gripper>\n``  -> ``OK``
     ``S\n``                                                            -> status line
 
-All joint values are integer degrees.
+Joint values carry fractional degrees (see sketch_artist.kinematics).
 """
 
 from __future__ import annotations
 
+import re
 import socket
-from typing import Optional, Tuple
+import time
+from typing import Optional, Sequence, Tuple
 
 
 class ArmClient:
@@ -68,6 +70,50 @@ class ArmClient:
     def status(self) -> str:
         """Query the current arm status line."""
         return self._send("S")
+
+    def status_angles(self) -> Optional[Tuple[float, ...]]:
+        """Six servo angles parsed out of the ``S`` reply, or None.
+
+        Agents disagree on the wording: the software simulator and the Gazebo
+        bridge answer ``S 90 90 ...`` while the UNO Q agent answers
+        ``STAT uptime_ms=... target=90,45,180,180,90,10``. Both are accepted.
+        """
+        try:
+            reply = self.status()
+        except (OSError, RuntimeError):
+            return None
+        match = re.search(r"target=([-\d.,]+)", reply)
+        parts = match.group(1).split(",") if match else reply.split()[1:]
+        try:
+            values = tuple(float(v) for v in parts[:6])
+        except ValueError:
+            return None
+        return values if len(values) == 6 else None
+
+    def move_ramped(self, angles: Sequence[float], max_step_deg: float = 5.0,
+                    dwell_s: float = 0.04) -> None:
+        """Move to ``angles`` in bounded steps from wherever the arm is now.
+
+        One command that swings every joint at once pulls all six servos to
+        full torque together. On a Braccio powered through the board that
+        current spike browns the board out and hard-resets it mid-draw -- the
+        first move, from the rest pose to the paper, is the worst offender.
+        Splitting it keeps the peak draw down.
+
+        Falls back to a single move when the agent will not report its pose.
+        """
+        target = tuple(float(a) for a in angles)
+        current = self.status_angles()
+        if current is None:
+            self.move(target)
+            return
+        span = max(abs(t - c) for t, c in zip(target, current))
+        steps = int(span / max(0.1, max_step_deg)) + 1
+        for i in range(1, steps + 1):
+            f = i / steps
+            self.move(tuple(c + (t - c) * f for c, t in zip(current, target)))
+            if i < steps:
+                time.sleep(dwell_s)
 
 
 def move_to_pose(angles, host: str = "127.0.0.1", port: int = 8765,

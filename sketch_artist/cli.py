@@ -63,7 +63,15 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
     settle = float(motion.get("settle_s", 0.15)) * (2.0 if slow else 1.0)
     pen_change = float(motion.get("pen_change_s", 0.4)) * (2.0 if slow else 1.0)
 
-    drawn = skipped = 0
+    # A move that swings every joint at once pulls all six servos to full
+    # torque together, and on a Braccio powered through the board that current
+    # spike browns the board out and resets it. The approach move from the rest
+    # pose to the paper is the worst one, so anything that large is ramped.
+    ramp_above = float(motion.get("ramp_above_deg", 8.0))
+    max_step = float(motion.get("max_step_deg", 5.0))
+
+    drawn = skipped = ramped = 0
+    previous = None
     with ArmClient(host=host, port=port) as arm:
         for m in moves:
             z = down_z if m.pen_down else up_z
@@ -72,9 +80,19 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
             except UnreachableError:
                 skipped += 1
                 continue
-            arm.move(angles.as_tuple())
+            target = angles.as_tuple()
+            span = (max(abs(t - c) for t, c in zip(target, previous))
+                    if previous is not None else float("inf"))
+            if span > ramp_above:
+                arm.move_ramped(target, max_step_deg=max_step)
+                ramped += 1
+            else:
+                arm.move(target)
+            previous = target
             drawn += 1
             time.sleep(pen_change if not m.pen_down else settle)
+    if ramped:
+        print(f"  ramped {ramped} large move(s) to keep the servo inrush down")
     if skipped:
         print(f"  ! {skipped} move(s) were out of reach and skipped "
               f"(check config/workspace.yaml geometry)")

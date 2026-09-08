@@ -46,7 +46,7 @@ paper:
   height_mm: 40            # drawing box size along +y
 
 pen:
-  down_z_mm: 2             # pencil tip height while drawing (touching paper)
+  down_z_mm: 6             # pencil tip height while drawing (touching paper)
   up_z_mm: 8               # travel height for pen-up moves between strokes.
                            # Every extra mm of lift raises the wrist point and
                            # shrinks the drawable area (scripts/check_workspace.py
@@ -79,6 +79,12 @@ motion:
   # as rubble; at 0.1 deg (~0.3 mm) it draws cleanly. Set 0 for firmware that
   # can only accept whole degrees.
   servo_decimals: 1
+  # Ramp any move that swings a joint more than ramp_above_deg, in steps of at
+  # most max_step_deg. All six servos going to full torque at once browns the
+  # board out and hard-resets it; the approach from the rest pose to the paper
+  # is the move that does it.
+  ramp_above_deg: 8.0
+  max_step_deg: 5.0
   settle_s: 0.15           # pause after each pen-down point
   pen_change_s: 0.4        # pause on pen up/down transitions
 
