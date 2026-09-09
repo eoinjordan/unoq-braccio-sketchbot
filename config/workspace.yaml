@@ -68,8 +68,13 @@ paper:
   height_mm: 30            # drawing box size along +y
 
 pen:
-  down_z_mm: 0             # pencil tip height while drawing (touching paper)
-  up_z_mm: 5               # travel height for pen-up moves between strokes.
+  down_z_mm: -1.5          # pencil tip height while drawing. MEASURED with the
+                           # ESP-EYE watching the pencil: the tip stops and the
+                           # grip starts to pivot (= real contact) at z ~ 0; the
+                           # servos only follow small height commands in jerks,
+                           # so this sits 1.5 mm past contact to keep graphite
+                           # on the sheet. -3 made the tilted pencil skid.
+  up_z_mm: 3.5             # travel height for pen-up moves between strokes.
                            # Keep BOTH within 0-5 mm: higher lifts push the
                            # far corners of the box onto a joint limit.
                            # Every extra mm of lift raises the wrist point and
@@ -120,7 +125,10 @@ motion:
   # board out and hard-resets it; the approach from the rest pose to the paper
   # is the move that does it.
   ramp_above_deg: 8.0
-  max_step_deg: 5.0
+  # 2.5, not 5: the calibrate UI's hovers at 2.5 deg never reset the board;
+  # one 4-deg-per-step sweep of the fully stretched arm did (and zeroed the
+  # config file on the way down). Smaller steps, smaller current peaks.
+  max_step_deg: 2.5
   settle_s: 0.15           # pause after each pen-down point
   pen_change_s: 0.4        # pause on pen up/down transitions
   # At every stroke start dip this far below down_z_mm, then come back. The

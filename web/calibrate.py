@@ -32,6 +32,7 @@ every one of them.
 from __future__ import annotations
 
 import json
+import os
 import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -67,7 +68,15 @@ def _write_config_keys(values: Dict[str, float]) -> None:
             raise KeyError(f"{key} not found in {WORKSPACE_YAML}")
         rendered = f"{value:g}"
         text = pattern.sub(lambda m: m.group(1) + rendered, text, count=1)
-    WORKSPACE_YAML.write_text(text, encoding="utf-8")
+    # Temp file + fsync + rename, not write_text: a servo inrush can reset the
+    # whole board at any moment, and an in-place write caught by that reset
+    # left workspace.yaml as a 0-byte file (and the UI unable to start).
+    tmp = WORKSPACE_YAML.with_suffix(".yaml.tmp")
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(text)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, WORKSPACE_YAML)
 
 
 def _reach_band(kin: BraccioKinematics, workspace: dict) -> Tuple[int, int]:
