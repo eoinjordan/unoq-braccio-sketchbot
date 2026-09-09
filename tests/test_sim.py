@@ -13,13 +13,17 @@ def test_records_single_stroke_and_renders(workspace_cfg, tmp_path):
     sim = SketchbotSimulator(workspace_cfg)
     pen = workspace_cfg["pen"]
     down_z, up_z = float(pen["down_z_mm"]), float(pen["up_z_mm"])
-    points = [(150, -20), (160, -10), (170, 0)]
+    # Box-relative and strictly reachable, for the reason given in
+    # test_pen_up_breaks_strokes below.
+    paper = workspace_cfg["paper"]
+    x0, y0 = float(paper["origin_x_mm"]) + 6.0, float(paper["origin_y_mm"]) + 6.0
+    points = [(x0, y0), (x0 + 8.0, y0 + 8.0), (x0 + 16.0, y0 + 16.0)]
 
     # Pen up to the start, draw the three points, then lift.
-    sim.apply_move(kin.solve(points[0][0], points[0][1], up_z).as_tuple())
+    sim.apply_move(kin.solve(points[0][0], points[0][1], up_z, strict=True).as_tuple())
     for x, y in points:
-        sim.apply_move(kin.solve(x, y, down_z).as_tuple())
-    sim.apply_move(kin.solve(points[-1][0], points[-1][1], up_z).as_tuple())
+        sim.apply_move(kin.solve(x, y, down_z, strict=True).as_tuple())
+    sim.apply_move(kin.solve(points[-1][0], points[-1][1], up_z, strict=True).as_tuple())
     sim.finish()
 
     assert len(sim.polylines) == 1
@@ -44,12 +48,21 @@ def test_pen_up_breaks_strokes(workspace_cfg):
     pen = workspace_cfg["pen"]
     down_z, up_z = float(pen["down_z_mm"]), float(pen["up_z_mm"])
 
-    # Two separate down-strokes with a lift between them.
-    for x, y in [(150, -20), (160, -20)]:
-        sim.apply_move(kin.solve(x, y, down_z).as_tuple())
-    sim.apply_move(kin.solve(160, -20, up_z).as_tuple())
-    for x, y in [(150, 20), (160, 20)]:
-        sim.apply_move(kin.solve(x, y, down_z).as_tuple())
+    # Two separate down-strokes with a lift between them, placed relative to
+    # the configured paper box so the test survives a re-calibrated rig. The
+    # points must be strictly reachable: a non-strict solve silently clamps an
+    # out-of-reach point to a pose that is not pen-down at all, which turns
+    # this into a test of the geometry rather than of stroke segmentation.
+    paper = workspace_cfg["paper"]
+    x0 = float(paper["origin_x_mm"]) + 6.0
+    x1 = x0 + 10.0
+    ya = float(paper["origin_y_mm"]) + 6.0
+    yb = float(paper["origin_y_mm"]) + float(paper["height_mm"]) - 6.0
+    for x, y in [(x0, ya), (x1, ya)]:
+        sim.apply_move(kin.solve(x, y, down_z, strict=True).as_tuple())
+    sim.apply_move(kin.solve(x1, ya, up_z, strict=True).as_tuple())
+    for x, y in [(x0, yb), (x1, yb)]:
+        sim.apply_move(kin.solve(x, y, down_z, strict=True).as_tuple())
     sim.finish()
 
     assert len(sim.polylines) == 2
