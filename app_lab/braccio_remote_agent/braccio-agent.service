@@ -1,6 +1,6 @@
 [Unit]
 Description=Sketchbot Braccio arm agent (M/S on :8765)
-After=default.target
+After=network.target
 
 [Service]
 Type=oneshot
