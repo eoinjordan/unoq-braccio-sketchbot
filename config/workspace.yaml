@@ -123,6 +123,11 @@ motion:
   max_step_deg: 5.0
   settle_s: 0.15           # pause after each pen-down point
   pen_change_s: 0.4        # pause on pen up/down transitions
+  # At every stroke start dip this far below down_z_mm, then come back. The
+  # servos only follow small height commands in jerks (see cli._draw_on_arm),
+  # so without the dip the tip starts each stroke hovering just above the
+  # sheet. 1 mm: at 3 mm of overshoot the tilted pencil skids sideways.
+  pen_down_overshoot_mm: 1.0
 
 planner:
   # When the next stroke starts within this distance of where the last one

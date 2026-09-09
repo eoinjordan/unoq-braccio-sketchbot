@@ -69,9 +69,18 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
     # pose to the paper is the worst one, so anything that large is ramped.
     ramp_above = float(motion.get("ramp_above_deg", 8.0))
     max_step = float(motion.get("max_step_deg", 5.0))
+    # Measured on the bench with a camera on the pencil: a 1 mm descent
+    # command moves the tip about 0.3 mm, in jerks, until the servo error beats
+    # its dead band and the gear backlash (the arm is at full stretch, so the
+    # load is high). Coming down onto the paper the tip therefore sits ABOVE
+    # the commanded height. Dipping past the drawing height at every stroke
+    # start and coming back takes that slack up from below, so the pencil is
+    # actually on the sheet when the stroke begins.
+    overshoot = float(motion.get("pen_down_overshoot_mm", 0.0))
 
     drawn = skipped = ramped = 0
     previous = None
+    was_down = False
     with ArmClient(host=host, port=port) as arm:
         for m in moves:
             z = down_z if m.pen_down else up_z
@@ -80,6 +89,13 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
                 # and the pen draws in the wrong place - or jams against the
                 # paper at a joint limit - instead of the move being skipped.
                 angles = kin.solve(m.x_mm, m.y_mm, z, strict=True)
+                dip = None
+                if m.pen_down and not was_down and overshoot > 0:
+                    try:
+                        dip = kin.solve(m.x_mm, m.y_mm, down_z - overshoot,
+                                        strict=True).as_tuple()
+                    except UnreachableError:
+                        dip = None       # the stroke still starts, just undipped
             except UnreachableError:
                 skipped += 1
                 continue
@@ -90,8 +106,12 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
                 arm.move_ramped(target, max_step_deg=max_step)
                 ramped += 1
             else:
+                if dip is not None:
+                    arm.move(dip)
+                    time.sleep(pen_change)
                 arm.move(target)
             previous = target
+            was_down = m.pen_down
             drawn += 1
             time.sleep(pen_change if not m.pen_down else settle)
     if ramped:
