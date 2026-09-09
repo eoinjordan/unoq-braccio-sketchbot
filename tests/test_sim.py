@@ -36,9 +36,12 @@ def test_records_single_stroke_and_renders(workspace_cfg, tmp_path):
 def test_apply_move_matches_commanded_point(workspace_cfg):
     kin = BraccioKinematics(workspace_cfg)
     sim = SketchbotSimulator(workspace_cfg)
-    tip = sim.apply_move(kin.solve(175, 0, 2).as_tuple())
-    assert abs(tip.x_mm - 175) < 5
-    assert abs(tip.y_mm - 0) < 5
+    paper = workspace_cfg["paper"]
+    x = float(paper["origin_x_mm"]) + float(paper["width_mm"]) / 2
+    y = float(paper["origin_y_mm"]) + float(paper["height_mm"]) / 2
+    tip = sim.apply_move(kin.solve(x, y, 2, strict=True).as_tuple())
+    assert abs(tip.x_mm - x) < 5
+    assert abs(tip.y_mm - y) < 5
     assert abs(tip.z_mm - 2) < 3
 
 
