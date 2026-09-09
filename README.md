@@ -401,6 +401,55 @@ wrist, so the ruler is the better answer.
 Do this once for a baseline, then again whenever the pen or the paper moves.
 Same ballpoint every time and the numbers hold.
 
+### Joint stops: the thing a ruler cannot tell you
+
+With the printed grip fitted, `wrist_vertical` does **not fold below ~14°** —
+the finger pivot lands on the wrist housing. A vertical 163 mm pen over a sheet
+at base level needs 4–17° there, so most of the old box was being commanded
+into a stalled servo. The MCU acknowledged every move, the pencil hung at
+whatever angle the stop left it, and nothing the model said about the tip
+height was true. On the bench that looks like *"the arm is stuck on the first
+stroke"* and a few graphite dots, and no amount of tuning `down_z_mm` fixes it.
+
+Two keys in `config/workspace.yaml` carry the fix:
+
+- `links.pen_tilt_deg: 15` leans the top of the pencil toward the base, the
+  way a hand holds one. The wrist servo angle is *(pen elevation − forearm
+  elevation)*, so each degree of tilt is a degree of clearance: the box moves
+  from 7–17° to 22–33° at the wrist.
+- `servo_limits.wrist_vertical.min: 17` declares the stop. Strict IK refuses a
+  pose inside it (`UnreachableError` names the joint), non-strict IK clamps to
+  it, and `scripts/check_workspace.py` sizes the box around it. The shipped
+  config keeps ≥ 3.6° of clearance on every joint at both pen heights, and a
+  test fails if a future grip change eats that margin.
+
+With the base and the sheet on the same level there is no 40 × 40 box that
+clears the limits for any pen length or tilt, so the box is 30 × 30 starting
+220 mm out. A ~50 mm block under the base (`base_height_mm += 50`) brings the
+40 mm box back at x = 215.
+
+**How to find a stop:** hold every other joint, step the suspect one through
+its range with raw `M` commands, and photograph each step. The wrist gave
+identical frames at 5, 8, 11 and 13° and its first movement at 15°. A 180°
+flip of the grip about the wrist changed nothing, so it is the pivot, not one
+side of the print.
+
+**Small height commands are mostly swallowed.** Stepping z down 1 mm at a
+time under a camera, the tip moved about 0.3 mm per commanded millimetre, in
+jerks — the servos' dead band plus gear backlash under the load of the
+stretched arm. Real contact is where the tip stops *and the grip starts to
+pivot*; on this rig that is z ≈ 0, and `down_z_mm: -1.5` sits 1.5 mm past it
+so graphite stays on the sheet (−3 made the tilted pencil skid). The CLI
+dips `motion.pen_down_overshoot_mm` (1 mm) below `down_z` at every stroke
+start and comes back, so the slack is taken up from below.
+
+**Do not add sweeps.** `motion.max_step_deg` is 2.5 because the calibrate UI
+has ramped from the rest pose at 2.5°/step without incident, while one
+4°/step sweep of the fully stretched arm browned the board out — and a reset
+mid-write left `workspace.yaml` as a 0-byte file. The UI now writes the config
+via temp file + fsync + rename; the rest pose, the ramped approach and the
+one-joint-at-a-time power-up in the firmware are there for the same reason.
+
 ## Calibration & safety
 
 Drawing is only as good as the geometry. Measure your arm's link lengths and
@@ -419,7 +468,9 @@ elbow and wrist only bend ±90°, so the shoulder-to-wrist distance has to stay
 between `hypot(l1, l2)` and `l1 + l2`, and the forearm can never point above
 horizontal while the pen stays vertical. The drawable region is therefore an
 annulus, not a disc — `scripts/check_workspace.py` shows it and sizes the paper
-box for you.
+box for you. `links.pen_tilt_deg` relaxes the second limit by leaning the pen,
+and `servo_limits` narrows the first to where the joints *actually* stop — see
+[Joint stops](#joint-stops-the-thing-a-ruler-cannot-tell-you) above.
 
 ## How it maps to Edge Impulse
 

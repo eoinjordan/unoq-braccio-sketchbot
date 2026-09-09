@@ -31,6 +31,20 @@ with `offset + sign * geometric` (`workspace.yaml` → `servo_calibration`).
 4. Run `--slow` and watch the first strokes; adjust `pen.down_z_mm` /
    `pen.up_z_mm` until the pen touches with light, even pressure. The printed
    grip is rigid, so go slowly — a small Z error shows up directly as pressure.
+5. Find the joint stops before trusting any of the above. Hold every other
+   joint, step one joint through the range the IK uses (raw `M` commands over
+   `:8765`), and watch it — a phone camera is enough. A joint that gives the
+   same frame for several commanded angles has a mechanical stop there; put it
+   in `workspace.yaml` → `servo_limits` with a couple of degrees of margin.
+   With the printed pen grip the wrist stops at ~14°, which `links.pen_tilt_deg`
+   is there to clear.
+6. Measure contact with a camera at paper level, not by feel: step z down
+   1 mm at a time and take the height where the tip stops descending *and* the
+   grip starts to pivot. Small height commands only move the tip a fraction of
+   the way (servo dead band + backlash), so set `pen.down_z_mm` 1–2 mm past
+   contact and keep `motion.pen_down_overshoot_mm` on. `web/calibrate` does the
+   stepping; `scripts/check_workspace.py` confirms the box still clears the
+   limits at the heights you chose.
 
 ## 4. Paper homography (wrist camera at the page pose)
 
