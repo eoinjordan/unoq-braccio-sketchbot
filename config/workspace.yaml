@@ -131,10 +131,15 @@ motion:
   # board out and hard-resets it; the approach from the rest pose to the paper
   # is the move that does it.
   ramp_above_deg: 8.0
-  # 2.5, not 5: the calibrate UI's hovers at 2.5 deg never reset the board;
-  # one 4-deg-per-step sweep of the fully stretched arm did (and zeroed the
-  # config file on the way down). Smaller steps, smaller current peaks.
-  max_step_deg: 2.5
+  # 1.5 with an 80 ms pause per step, not 5: the unfold from the rest pose
+  # to the paper is the only move that has ever reset the board - once at
+  # 4 deg/step, once at 2.5 (both zeroed files on the SD card on the way
+  # down). Every ramp - the CLI's approach, the UI's hover, park - uses these.
+  # Smaller steps, shorter current peaks, time for the rail to recover. If
+  # the arm still resets the board on the approach, the fix is a separate
+  # 5 V supply for the servos, not a config value.
+  max_step_deg: 1.5
+  ramp_dwell_s: 0.08
   settle_s: 0.15           # pause after each pen-down point
   pen_change_s: 0.4        # pause on pen up/down transitions
   # At every stroke start dip this far below down_z_mm, then come back. The

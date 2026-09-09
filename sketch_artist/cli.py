@@ -70,6 +70,12 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
     # pose to the paper is the worst one, so anything that large is ramped.
     ramp_above = float(motion.get("ramp_above_deg", 8.0))
     max_step = float(motion.get("max_step_deg", 5.0))
+    # The unfold from the rest pose to the paper is the only move that has
+    # ever reset the board (servo inrush through the board's supply), and it
+    # did so once at 4 deg/step and once at 2.5. Smaller steps and a longer
+    # pause between them keep each current peak short and let the rail
+    # recover; the approach takes a few seconds longer, which is nothing.
+    ramp_dwell = float(motion.get("ramp_dwell_s", 0.04))
     # Measured on the bench with a camera on the pencil: a 1 mm descent
     # command moves the tip about 0.3 mm, in jerks, until the servo error beats
     # its dead band and the gear backlash (the arm is at full stretch, so the
@@ -131,7 +137,7 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
             span = (max(abs(t - c) for t, c in zip(target, previous))
                     if previous is not None else float("inf"))
             if span > ramp_above:
-                arm.move_ramped(target, max_step_deg=max_step)
+                arm.move_ramped(target, max_step_deg=max_step, dwell_s=ramp_dwell)
                 ramped += 1
                 sent = target
             else:
@@ -273,7 +279,7 @@ def _park(host: str, port: int) -> int:
     try:
         with ArmClient(host=host, port=port) as arm:
             print(f"Parking at the firmware rest pose via {host}:{port} ...")
-            arm.move_ramped(REST_POSE, max_step_deg=3.0, dwell_s=0.05)
+            arm.move_ramped(REST_POSE, max_step_deg=1.5, dwell_s=0.08)
             print(f"  parked at {arm.status_angles()}; safe to power off.")
     except OSError as exc:
         print(f"  ! arm agent unreachable at {host}:{port}: {exc}")

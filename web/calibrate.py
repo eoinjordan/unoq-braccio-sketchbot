@@ -140,7 +140,10 @@ class Calibrator:
     def _move_to(self, arm: ArmClient, x: float, y: float, z: float,
                  step: float = 2.0) -> Tuple[float, ...]:
         angles = self.kin.solve(x, y, z, strict=True)   # raises if unreachable
-        arm.move_ramped(angles.as_tuple(), max_step_deg=step, dwell_s=0.03)
+        motion = self.workspace.get("motion", {})
+        arm.move_ramped(angles.as_tuple(),
+                        max_step_deg=min(step, float(motion.get("max_step_deg", step))),
+                        dwell_s=float(motion.get("ramp_dwell_s", 0.03)))
         self.x, self.y, self.z = x, y, z
         return angles.as_tuple()
 
@@ -274,7 +277,10 @@ class Calibrator:
 
     def park(self) -> dict:
         with self.lock, ArmClient(host=self.host, port=self.port) as arm:
-            arm.move_ramped(REST_POSE, max_step_deg=3.0, dwell_s=0.05)
+            motion = self.workspace.get("motion", {})
+            arm.move_ramped(REST_POSE,
+                            max_step_deg=float(motion.get("max_step_deg", 1.5)),
+                            dwell_s=float(motion.get("ramp_dwell_s", 0.08)))
         return {"ok": True, "pose": REST_POSE}
 
 
