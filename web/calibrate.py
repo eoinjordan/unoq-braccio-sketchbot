@@ -214,7 +214,10 @@ class Calibrator:
                 f"touching at {down:g} mm leaves no lift clearance inside the "
                 f"reach band (max {hi} mm). Shorten the pen so the tip stands "
                 f"27 mm below the collar; the band then reopens to ~0-8 mm.")
-        up = round(min(down + 5.0, float(hi)), 1)
+        # Lift as high as the band allows minus 3 mm of joint margin, never
+        # less than 5 mm above the paper: the servos deliver a fraction of a
+        # small height command, and a 5 mm lift left the pencil dragging.
+        up = round(min(max(down + 5.0, float(hi) - 3.0), float(hi)), 1)
         _write_config_keys({"down_z_mm": down, "up_z_mm": up})
         self.reload()
         return {"ok": True, "down_z_mm": down, "up_z_mm": up}
@@ -237,7 +240,7 @@ class Calibrator:
         new_len = float(self.workspace["links"]["wrist_pen_mm"]) + extra
         _write_config_keys({"wrist_pen_mm": new_len})
         self.reload()
-        up = float(min(5, self.band[1])) if self.band[1] > 0 else 5.0
+        up = float(min(max(5, self.band[1] - 3), self.band[1])) if self.band[1] > 0 else 5.0
         _write_config_keys({"down_z_mm": 0.0, "up_z_mm": up})
         self.reload()
         self.z = 0.0

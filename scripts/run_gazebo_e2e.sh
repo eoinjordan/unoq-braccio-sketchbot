@@ -158,7 +158,7 @@ sleep 3
 # ----------------------------------------------------------------------- draw
 echo "== drawing (this streams every planned move over M/S, as on hardware)"
 (cd "$repo" && "$python_bin" -m sketch_artist.cli \
-    --image "$image" --style "$style" --host 127.0.0.1 --port 8765) | tee -a "$log"
+    --image "$image" --style "$style" --host 127.0.0.1 --port 8765     --no-deadband) | tee -a "$log"     # Gazebo's servos have no dead band
 
 echo "== waiting for the pen tracker to flush its log"
 for _ in $(seq 1 40); do

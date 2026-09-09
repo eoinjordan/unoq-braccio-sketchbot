@@ -74,7 +74,13 @@ pen:
                            # servos only follow small height commands in jerks,
                            # so this sits 1.5 mm past contact to keep graphite
                            # on the sheet. -3 made the tilted pencil skid.
-  up_z_mm: 3.5             # travel height for pen-up moves between strokes.
+  up_z_mm: 10              # travel height for pen-up moves between strokes.
+                           # 11.5 mm above down_z, not 5: the servos deliver
+                           # a fraction of a small height command, and at
+                           # +5 the pencil never left the sheet - the first
+                           # portrait was long travel lines between strokes.
+                           # 10 keeps 1.5 deg of joint margin box-wide;
+                           # 13 is the band's top with none.
                            # Keep BOTH within 0-5 mm: higher lifts push the
                            # far corners of the box onto a joint limit.
                            # Every extra mm of lift raises the wrist point and
@@ -136,6 +142,20 @@ motion:
   # so without the dip the tip starts each stroke hovering just above the
   # sheet. 1 mm: at 3 mm of overshoot the tilted pencil skids sideways.
   pen_down_overshoot_mm: 1.0
+  # Per-joint servo dead band, degrees, for the CLI's compensation: each
+  # target is sent overshot by this much in the direction of travel so the
+  # servo stops AT the target instead of a band short of it. Measured effect
+  # without it: ~0.3 mm of tip motion per commanded mm, and strokes across
+  # the sheet (base rotation, 1 deg = 4 mm at 235 mm) flattened to jitter.
+  # First estimates from the z descent (~2 deg of lag on elbow/wrist at full
+  # stretch, halved for safety); refine per joint by stepping it under a
+  # camera. 0 disables a joint; --no-deadband disables all (the simulator and
+  # Gazebo have no dead band and are run that way).
+  deadband_deg:
+    base: 0.6
+    shoulder: 0.5
+    elbow: 1.0
+    wrist_vertical: 1.0
 
 planner:
   # When the next stroke starts within this distance of where the last one

@@ -55,7 +55,8 @@ def _look_at(conf, host: str, port: int, which: str, slow: bool) -> None:
 
 
 def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
-                 host: str, port: int, slow: bool) -> dict:
+                 host: str, port: int, slow: bool,
+                 compensate: bool = True) -> dict:
     pen = workspace_cfg["pen"]
     motion = workspace_cfg.get("motion", {})
     down_z = float(pen["down_z_mm"])
@@ -77,9 +78,36 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
     # start and coming back takes that slack up from below, so the pencil is
     # actually on the sheet when the stroke begins.
     overshoot = float(motion.get("pen_down_overshoot_mm", 0.0))
+    # Dead-band compensation. Each servo ignores a command change smaller
+    # than its dead band (plus gear backlash under load), so a stroke made of
+    # 0.3-1 mm steps is mostly swallowed and released in jerks, and the base -
+    # 1 deg = 4 mm at the paper - flattens every stroke that runs across the
+    # sheet. Commanding target + band in the direction of travel makes the
+    # servo stop at the target instead of a band short of it. Applied only to
+    # normal (unramped) moves; zero for a joint disables it. The simulator and
+    # Gazebo have no dead band, so --sim and the e2e turn it off.
+    deadband = motion.get("deadband_deg") or {}
+    joints = ("base", "shoulder", "elbow", "wrist_vertical",
+              "wrist_rotation", "gripper")
+    band = tuple(float(deadband.get(j, 0.0)) if compensate else 0.0
+                 for j in joints)
+
+    def compensated(target, sent_before):
+        if sent_before is None or not any(band):
+            return target
+        out = []
+        for t, s, b in zip(target, sent_before, band):
+            # No change on this joint: hold what was sent last, so a joint
+            # that is not moving does not creep back by its own band.
+            if b <= 0.0 or abs(t - s) < 1e-6:
+                out.append(t if b <= 0.0 else s)
+            else:
+                out.append(t + (b if t > s else -b))
+        return tuple(out)
 
     drawn = skipped = ramped = 0
     previous = None
+    sent = None
     was_down = False
     with ArmClient(host=host, port=port) as arm:
         for m in moves:
@@ -105,11 +133,14 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
             if span > ramp_above:
                 arm.move_ramped(target, max_step_deg=max_step)
                 ramped += 1
+                sent = target
             else:
                 if dip is not None:
-                    arm.move(dip)
+                    sent = compensated(dip, sent)
+                    arm.move(sent)
                     time.sleep(pen_change)
-                arm.move(target)
+                sent = compensated(target, sent)
+                arm.move(sent)
             previous = target
             was_down = m.pen_down
             drawn += 1
@@ -201,8 +232,10 @@ def run(args) -> int:
         kin = BraccioKinematics(conf["workspace"])
         print(f"Drawing on the software simulator at 127.0.0.1:{agent.port} ...")
         try:
+            # No dead band in software: compensating would only distort.
             stats = _draw_on_arm(moves, conf["workspace"], kin,
-                                 "127.0.0.1", agent.port, args.slow)
+                                 "127.0.0.1", agent.port, args.slow,
+                                 compensate=False)
             sim_out = str(cfg.resolve_path(args.sim_render))
             agent.simulator.render(sim_out)
         finally:
@@ -218,7 +251,8 @@ def run(args) -> int:
     kin = BraccioKinematics(conf["workspace"])
     print(f"Drawing on the Braccio via {args.host}:{args.port} ...")
     try:
-        _draw_on_arm(moves, conf["workspace"], kin, args.host, args.port, args.slow)
+        _draw_on_arm(moves, conf["workspace"], kin, args.host, args.port, args.slow,
+                     compensate=not args.no_deadband)
     except OSError as exc:
         print(f"Could not reach the arm agent at {args.host}:{args.port} ({exc}).")
         print("  Start the arm agent (Arduino App Lab: braccio_remote_agent) so "
@@ -274,6 +308,10 @@ def main(argv=None) -> int:
                         help="List the available caricature styles and exit.")
     parser.add_argument("--host", default="127.0.0.1", help="Arm agent host.")
     parser.add_argument("--port", type=int, default=8765, help="Arm agent port.")
+    parser.add_argument("--no-deadband", action="store_true",
+                        help="Send servo targets as computed, without the "
+                             "motion.deadband_deg overshoot. For the Gazebo "
+                             "bridge and other agents with no dead band.")
     parser.add_argument("--park", action="store_true",
                         help="Ramp the arm to the firmware rest pose and exit. Do "
                              "this before powering off, so the next boot moves "

@@ -158,11 +158,15 @@ def test_configured_box_clears_every_servo_limit(workspace_cfg):
     kin = BraccioKinematics(workspace_cfg)
     paper = workspace_cfg["paper"]
     pen = workspace_cfg["pen"]
-    worst = 999.0
-    for z in (float(pen["down_z_mm"]), float(pen["up_z_mm"])):
+    # On the paper a joint at its stop means a stalled stroke, so 2 deg. In
+    # the air (pen-up travel) it only means a slightly different hover pose,
+    # and the lift is deliberately pushed up toward the band's top because
+    # the servos deliver a fraction of a small height command - so 1 deg.
+    for z, need in ((float(pen["down_z_mm"]), 2.0), (float(pen["up_z_mm"]), 1.0)):
+        worst = 999.0
         for i in range(7):
             for j in range(7):
                 x = float(paper["origin_x_mm"]) + float(paper["width_mm"]) * i / 6
                 y = float(paper["origin_y_mm"]) + float(paper["height_mm"]) * j / 6
                 worst = min(worst, kin.margin(x, y, z))
-    assert worst >= 2.0, f"only {worst:.1f} deg of clearance somewhere in the box"
+        assert worst >= need, f"only {worst:.1f} deg of clearance at z={z} somewhere in the box"
