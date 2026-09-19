@@ -7,6 +7,21 @@ from sketch_artist.kinematics import BraccioKinematics
 REQUIRED_SECTIONS = ["cameras", "workspace", "drawing", "branding", "scenes"]
 
 
+def test_runtime_overrides_preserve_defaults(tmp_path):
+    import shutil
+    from sketch_artist import config
+    for name in ("cameras", "workspace", "drawing", "branding", "scenes"):
+        shutil.copy(config.CONFIG_DIR / f"{name}.yaml", tmp_path)
+    before = (tmp_path / "workspace.yaml").read_bytes()
+    config.save_overrides({"workspace": {"paper": {"rotation_deg": 60}}}, tmp_path)
+    config.save_overrides({"control": {"child_mode": True}}, tmp_path)
+    loaded = config.load_all(tmp_path)
+    assert loaded["workspace"]["paper"]["rotation_deg"] == 60
+    assert loaded["workspace"]["paper"]["width_mm"] == 30
+    assert loaded["control"]["child_mode"] is True
+    assert (tmp_path / "workspace.yaml").read_bytes() == before
+
+
 def test_load_all_sections(conf):
     for key in REQUIRED_SECTIONS:
         assert key in conf, f"missing config section: {key}"

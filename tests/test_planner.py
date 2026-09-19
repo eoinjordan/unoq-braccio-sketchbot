@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import copy
 
+import pytest
+
+from sketch_artist.paper import paper_to_world, world_to_paper
 from sketch_artist.planner import Move, move_count, plan
 
 
@@ -42,3 +45,18 @@ def test_join_gap_keeps_pen_down(workspace_cfg):
     # One pen-up to reach the first point + one final lift = 2 total.
     ups = sum(1 for m in moves if not m.pen_down)
     assert ups == 2
+
+
+@pytest.mark.parametrize("rotation", [0, 60, -60, 90, 180])
+def test_rotated_paper_plan_and_inverse(workspace_cfg, rotation):
+    strokes = [[(0, 0), (10, 0), (10, 10), (0, 10)]]
+    original = plan(strokes, workspace_cfg)
+    workspace_cfg["paper"]["rotation_deg"] = rotation
+    rotated = plan(strokes, workspace_cfg)
+    paper = workspace_cfg["paper"]
+    for before, after in zip(original, rotated):
+        local_x = before.x_mm - paper["origin_x_mm"]
+        local_y = before.y_mm - paper["origin_y_mm"]
+        assert (after.x_mm, after.y_mm) == pytest.approx(paper_to_world(paper, local_x, local_y))
+        assert world_to_paper(paper, after.x_mm, after.y_mm) == pytest.approx((local_x, local_y))
+        assert after.pen_down == before.pen_down

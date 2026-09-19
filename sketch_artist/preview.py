@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 
+from .paper import world_to_paper
 from .planner import Move
 
 
@@ -30,8 +31,6 @@ def render_png(moves: List[Move], workspace_cfg: dict, out_path: str,
     from PIL import Image, ImageDraw
 
     paper = workspace_cfg["paper"]
-    ox = float(paper["origin_x_mm"])
-    oy = float(paper["origin_y_mm"])
     w = float(paper["width_mm"])
     h = float(paper["height_mm"])
 
@@ -39,12 +38,13 @@ def render_png(moves: List[Move], workspace_cfg: dict, out_path: str,
     H = int(h * px_per_mm) + 20
 
     def to_px(x_mm, y_mm):
-        return (10 + (x_mm - ox) * px_per_mm, 10 + (y_mm - oy) * px_per_mm)
+        local_x, local_y = world_to_paper(paper, x_mm, y_mm)
+        return (round(10 + local_x * px_per_mm, 6), round(10 + local_y * px_per_mm, 6))
 
     img = Image.new("RGB", (W, H), "white")
     draw = ImageDraw.Draw(img)
     # Paper border.
-    draw.rectangle([to_px(ox, oy), to_px(ox + w, oy + h)], outline="#cccccc")
+    draw.rectangle([(10, 10), (10 + w * px_per_mm, 10 + h * px_per_mm)], outline="#cccccc")
 
     # Pen-up travel in light grey.
     prev = None
@@ -67,8 +67,6 @@ def render_png(moves: List[Move], workspace_cfg: dict, out_path: str,
 def render_svg(moves: List[Move], workspace_cfg: dict, out_path: str) -> str:
     """Write the ink strokes to an SVG (millimetre units)."""
     paper = workspace_cfg["paper"]
-    ox = float(paper["origin_x_mm"])
-    oy = float(paper["origin_y_mm"])
     w = float(paper["width_mm"])
     h = float(paper["height_mm"])
 
@@ -79,7 +77,8 @@ def render_svg(moves: List[Move], workspace_cfg: dict, out_path: str) -> str:
         f'stroke="#cccccc" stroke-width="0.3"/>',
     ]
     for line in _split_polylines(moves):
-        pts = " ".join(f"{x - ox:.2f},{y - oy:.2f}" for x, y in line)
+        pts = " ".join(f"{local_x:z.2f},{local_y:z.2f}"
+                       for local_x, local_y in (world_to_paper(paper, x, y) for x, y in line))
         parts.append(
             f'<polyline points="{pts}" fill="none" stroke="#0b1221" '
             f'stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round"/>'

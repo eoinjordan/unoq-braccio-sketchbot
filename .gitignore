@@ -17,6 +17,9 @@ firmware/**/secrets.h
 # Generated output (sketches, previews, gallery cards)
 output/
 config/homography.json
+config/runtime.yaml
+config/.runtime-*.yaml
+web/node_modules/
 
 # Brand assets that shouldn't be committed (drop your own locally)
 assets/edge_impulse_logo.png

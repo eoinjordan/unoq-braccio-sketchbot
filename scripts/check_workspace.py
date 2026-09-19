@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sketch_artist import config as cfg
 from sketch_artist.kinematics import BraccioKinematics, UnreachableError
+from sketch_artist.paper import rotate_xy
 
 Box = Tuple[float, float, float, float]  # origin_x, origin_y, width, height
 
@@ -58,8 +59,9 @@ def _within(angles, limit_sets) -> bool:
 
 
 def drawable(kin: BraccioKinematics, x: float, y: float, heights,
-             limit_sets=LIMIT_SETS["both"]) -> bool:
+             limit_sets=LIMIT_SETS["both"], rotation_deg=0.0) -> bool:
     """True when the pen reaches (x, y) at every height without clamping."""
+    x, y = rotate_xy(x, y, rotation_deg)
     for z in heights:
         try:
             angles = kin.solve(x, y, z, strict=True)
@@ -78,16 +80,16 @@ def _grid(box: Box, step: float) -> List[Tuple[float, float]]:
 
 
 def check_box(kin: BraccioKinematics, box: Box, heights, step: float = 5.0,
-              limit_sets=LIMIT_SETS["both"]) -> Tuple[int, int]:
+              limit_sets=LIMIT_SETS["both"], rotation_deg=0.0) -> Tuple[int, int]:
     """Return (drawable_points, total_points) over a grid covering the box."""
     points = _grid(box, step)
-    good = sum(1 for x, y in points if drawable(kin, x, y, heights, limit_sets))
+    good = sum(1 for x, y in points if drawable(kin, x, y, heights, limit_sets, rotation_deg))
     return good, len(points)
 
 
 def largest_box(kin: BraccioKinematics, heights, step: float = 5.0,
                 aspect: float = 1.0,
-                limit_sets=LIMIT_SETS["both"]) -> Optional[Box]:
+                limit_sets=LIMIT_SETS["both"], rotation_deg=0.0) -> Optional[Box]:
     """Largest fully drawable box of the given height/width ratio.
 
     Samples reachability once onto a grid, then scans candidate boxes against a
@@ -99,7 +101,7 @@ def largest_box(kin: BraccioKinematics, heights, step: float = 5.0,
     reach = kin.l1 + kin.l2
     xs = _frange(step, reach, step)
     ys = _frange(-reach, reach, step)
-    mask = [[1 if drawable(kin, x, y, heights, limit_sets) else 0 for y in ys]
+    mask = [[1 if drawable(kin, x, y, heights, limit_sets, rotation_deg) else 0 for y in ys]
             for x in xs]
 
     # Summed-area table: total[i][j] = free points in mask[:i][:j].
@@ -191,7 +193,8 @@ def main(argv=None) -> int:
         print(line)
 
     limit_sets = LIMIT_SETS[args.limits]
-    good, total = check_box(kin, box, heights, args.step, limit_sets)
+    rotation = float(paper.get("rotation_deg", 0.0))
+    good, total = check_box(kin, box, heights, args.step, limit_sets, rotation)
     print(f"\npaper box {box[2]:.0f} x {box[3]:.0f} mm at "
           f"({box[0]:.0f}, {box[1]:.0f}): {good}/{total} grid points drawable")
 
@@ -203,7 +206,7 @@ def main(argv=None) -> int:
           "those strokes.")
     if args.suggest:
         print("searching for the largest box that fits ...")
-        best = largest_box(kin, heights, args.step, args.aspect, limit_sets)
+        best = largest_box(kin, heights, args.step, args.aspect, limit_sets, rotation)
         if best is None:
             print("  none found: shorten the pen (links.wrist_pen_mm), lower "
                   "pen.up_z_mm, or move the paper below the arm's base plane.")

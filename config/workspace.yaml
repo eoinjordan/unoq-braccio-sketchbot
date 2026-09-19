@@ -64,6 +64,7 @@ paper:
   # block (base_height_mm += 50) brings a full 40 x 40 box back at x=215.
   origin_x_mm: 220
   origin_y_mm: -15
+  rotation_deg: 0
   width_mm: 30             # drawing box size along +x
   height_mm: 30            # drawing box size along +y
 

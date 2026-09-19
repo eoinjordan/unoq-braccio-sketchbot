@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import glob
 import os
+import sys
 import time
 import ipaddress
 import socket
@@ -81,7 +82,8 @@ def resolve_video_device(usb_id: str) -> str:
 
 
 def _open_capture(
-    device: str, width: int, height: int, warmup_frames: int
+    device: str, width: int, height: int, warmup_frames: int,
+    pixel_format: str = "auto", fps: int = 30,
 ) -> tuple[Optional["cv2.VideoCapture"], str]:
     """Open one node; return ``(capture, note)``.
 
@@ -91,11 +93,14 @@ def _open_capture(
     the requested size and a safe 640x480 fallback, keeping whichever first
     delivers a real frame.
     """
-    cap = cv2.VideoCapture(device, cv2.CAP_V4L2)
+    backend = cv2.CAP_AVFOUNDATION if sys.platform == "darwin" else cv2.CAP_V4L2
+    cap = cv2.VideoCapture(device, backend)
     if not cap.isOpened():
         cap.release()
         return None, "could not open (permission denied or device busy)"
-    for fourcc in ("MJPG", "YUYV", None):
+    cap.set(cv2.CAP_PROP_FPS, fps)
+    formats = ("MJPG", "YUYV", None) if pixel_format == "auto" else (pixel_format,)
+    for fourcc in formats:
         for (w, h) in ((width, height), (640, 480)):
             if fourcc:
                 cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*fourcc))
@@ -115,7 +120,8 @@ def _open_capture(
 class Camera:
     """A single opened camera, selected by USB ID."""
 
-    def __init__(self, usb_id: str, width: int, height: int, warmup_frames: int = 4):
+    def __init__(self, usb_id: str, width: int, height: int, warmup_frames: int = 4,
+                 pixel_format: str = "auto", fps: int = 30):
         self.usb_id = usb_id
         self.width = width
         self.height = height
@@ -125,7 +131,8 @@ class Camera:
         self.device = None
         notes = []
         for device in candidates:
-            cap, note = _open_capture(device, width, height, warmup_frames)
+            cap, note = _open_capture(device, width, height, warmup_frames,
+                                      pixel_format, fps)
             notes.append(f"{device}: {note}")
             if cap is not None:
                 self.cap = cap
@@ -162,6 +169,55 @@ class Camera:
         return self
 
     def __exit__(self, *exc) -> None:
+        self.close()
+
+
+class VideoCamera(Camera):
+    """An explicit local video device or a bounded-time network stream."""
+
+    def __init__(self, source, width=1280, height=720, warmup_frames=2,
+                 pixel_format="auto", fps=30, stream=False):
+        self.usb_id = str(source)
+        self.device = source
+        self.cap = None
+        if stream:
+            self.cap = cv2.VideoCapture(str(source), cv2.CAP_FFMPEG, [
+                cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 4000,
+                cv2.CAP_PROP_READ_TIMEOUT_MSEC, 2000,
+            ])
+            if not self.cap.isOpened():
+                self.close()
+                raise RuntimeError(f"Could not open camera stream {source}")
+        else:
+            self.cap, note = _open_capture(source, width, height, warmup_frames,
+                                           pixel_format, fps)
+            if self.cap is None:
+                raise RuntimeError(f"Could not open camera {source}: {note}")
+
+
+class TransformedCamera:
+    """Apply the saved orientation consistently to previews and portrait input."""
+
+    def __init__(self, camera, rotation=0, mirror=False):
+        if rotation not in (0, 90, 180, 270):
+            raise ValueError("Camera rotation must be 0, 90, 180 or 270 degrees")
+        self.camera, self.rotation, self.mirror = camera, rotation, mirror
+
+    def read(self):
+        frame = self.camera.read()
+        rotations = {90: cv2.ROTATE_90_CLOCKWISE, 180: cv2.ROTATE_180,
+                     270: cv2.ROTATE_90_COUNTERCLOCKWISE}
+        if self.rotation:
+            frame = cv2.rotate(frame, rotations[self.rotation])
+        return cv2.flip(frame, 1) if self.mirror else frame
+
+    def close(self):
+        self.camera.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
         self.close()
 
 
@@ -246,7 +302,9 @@ class HttpCamera:
     def _grab(self) -> np.ndarray:
         try:
             with urllib.request.urlopen(self._fetch_url, timeout=self.timeout) as resp:
-                data = resp.read()
+                data = resp.read(8_000_001)
+                if len(data) > 8_000_000:
+                    raise RuntimeError("Camera snapshot exceeds 8 MB; use stream mode for MJPEG")
         except (urllib.error.URLError, OSError) as exc:
             # The camera may have taken a new DHCP lease; drop the cached
             # address so the next attempt resolves the name again.
@@ -396,9 +454,12 @@ def resolve_camera_spec(cameras_cfg: dict, role: str) -> dict:
     cams = cameras_cfg.get("cameras", {}) or {}
 
     def usable(spec) -> bool:
-        return isinstance(spec, dict) and bool(
-            spec.get("usb_id") or spec.get("url") or spec.get("serial"))
+        return isinstance(spec, dict) and spec.get("enabled", True) and bool(
+            spec.get("usb_id") or spec.get("url") or spec.get("serial")
+            or spec.get("device") is not None)
 
+    if isinstance(cams.get(role), dict) and not cams[role].get("enabled", True):
+        raise KeyError(f"Camera role '{role}' is disabled")
     if usable(cams.get(role)):
         return cams[role]
     for shared in ("single", "wrist"):
@@ -423,6 +484,24 @@ def open_camera(cameras_cfg: dict, role: str):
     (``serial``). All return an object with ``read() -> BGR frame`` / ``close()``.
     """
     spec = resolve_camera_spec(cameras_cfg, role)
+    rotation = int(spec.get("rotation", 0))
+    if rotation not in (0, 90, 180, 270):
+        raise ValueError("Camera rotation must be 0, 90, 180 or 270 degrees")
+    camera = _open_spec(spec)
+    if rotation or spec.get("mirror", False):
+        return TransformedCamera(camera, rotation, bool(spec.get("mirror", False)))
+    return camera
+
+
+def _open_spec(spec: dict):
+    if spec.get("format") in ("mjpeg", "rtsp") or spec.get("device") is not None:
+        return VideoCamera(
+            source=spec.get("url") or spec.get("device"),
+            width=int(spec.get("width", 1280)), height=int(spec.get("height", 720)),
+            warmup_frames=int(spec.get("warmup_frames", 2)),
+            pixel_format=spec.get("pixel_format", "auto"), fps=int(spec.get("fps", 30)),
+            stream=bool(spec.get("url")),
+        )
     if spec.get("url"):
         return HttpCamera(
             url=str(spec["url"]),
@@ -445,6 +524,8 @@ def open_camera(cameras_cfg: dict, role: str):
         width=int(spec.get("width", 1280)),
         height=int(spec.get("height", 720)),
         warmup_frames=int(spec.get("warmup_frames", 4)),
+        pixel_format=spec.get("pixel_format", "auto"),
+        fps=int(spec.get("fps", 30)),
     )
 
 

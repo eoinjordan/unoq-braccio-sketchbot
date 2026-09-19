@@ -31,6 +31,7 @@ from typing import List, Optional, Sequence, Tuple
 
 from . import config as cfg
 from .fk import BraccioForwardKinematics, PenTip
+from .paper import world_to_paper
 
 Point = Tuple[float, float]
 Polyline = List[Point]
@@ -96,17 +97,17 @@ class SketchbotSimulator:
 
         self.finish()
         paper = self.workspace["paper"]
-        ox, oy = float(paper["origin_x_mm"]), float(paper["origin_y_mm"])
         w, h = float(paper["width_mm"]), float(paper["height_mm"])
         W = int(w * px_per_mm) + 20
         H = int(h * px_per_mm) + 20
 
         def to_px(x_mm: float, y_mm: float) -> Point:
-            return (10 + (x_mm - ox) * px_per_mm, 10 + (y_mm - oy) * px_per_mm)
+            local_x, local_y = world_to_paper(paper, x_mm, y_mm)
+            return (10 + local_x * px_per_mm, 10 + local_y * px_per_mm)
 
         img = Image.new("RGB", (W, H), "white")
         draw = ImageDraw.Draw(img)
-        draw.rectangle([to_px(ox, oy), to_px(ox + w, oy + h)], outline="#cccccc")
+        draw.rectangle([(10, 10), (10 + w * px_per_mm, 10 + h * px_per_mm)], outline="#cccccc")
         for line in self.polylines:
             if len(line) >= 2:
                 draw.line([to_px(x, y) for x, y in line],

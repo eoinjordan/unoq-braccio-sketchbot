@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import List
 
 from .config import ensure_dir, resolve_path
+from .paper import world_to_paper
 from .planner import Move
 from .preview import _split_polylines
 
@@ -58,13 +59,13 @@ def render_postcard(moves: List[Move], workspace_cfg: dict, branding_cfg: dict,
 
     # Map drawing (paper mm) into the postcard drawing box.
     paper = workspace_cfg["paper"]
-    ox, oy = float(paper["origin_x_mm"]), float(paper["origin_y_mm"])
     pw, ph = float(paper["width_mm"]), float(paper["height_mm"])
     sx = box["w"] / pw
     sy = box["h"] / ph
 
     def to_px(x_mm, y_mm):
-        return (box["x"] + (x_mm - ox) * sx, box["y"] + (y_mm - oy) * sy)
+        local_x, local_y = world_to_paper(paper, x_mm, y_mm)
+        return (round(box["x"] + local_x * sx, 6), round(box["y"] + local_y * sy, 6))
 
     for line in _split_polylines(moves):
         pts = [to_px(x, y) for x, y in line]

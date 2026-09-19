@@ -43,9 +43,17 @@ def _capture_face(conf) -> "cv2.Mat":
 def _look_at(conf, host: str, port: int, which: str, slow: bool) -> None:
     """Aim a single wrist camera at the ``person`` or ``page`` by moving the arm
     to a configured pose (``workspace.yaml`` ``camera_poses``). No-op when no
-    pose is set or the arm is unreachable — then aim the camera by hand."""
+    pose is set, the camera is fixed, or the arm is unreachable."""
     angles = (conf["workspace"].get("camera_poses", {}) or {}).get(which)
     if not angles:
+        return
+    from .cameras import resolve_camera_spec
+    role = "face" if which == "person" else "gripper"
+    try:
+        camera = resolve_camera_spec(conf["cameras"], role)
+    except KeyError:
+        return
+    if not camera.get("mounted_on_arm", True):
         return
     if move_to_pose(angles, host=host, port=port):
         time.sleep(2.0 if slow else 1.0)  # settle + let the subject pose
@@ -155,6 +163,10 @@ def _draw_on_arm(moves, workspace_cfg, kin: BraccioKinematics,
 
 def run(args) -> int:
     conf = cfg.load_all()
+    no_motion = args.dry_run or args.no_arm or args.sim
+    if not no_motion and conf.get("tools", {}).get("active", "sketch") != "sketch":
+        print("Select Sketch mode and fit the pen before physical portrait drawing.")
+        return 2
     out_dir = cfg.ensure_dir(cfg.resolve_path("output"))
 
     # 1. Capture / load the face image.
@@ -166,7 +178,8 @@ def run(args) -> int:
         print(f"Loaded {args.image}")
     else:
         print("Capturing from the camera ...")
-        _look_at(conf, args.host, args.port, "person", args.slow)
+        if not no_motion:
+            _look_at(conf, args.host, args.port, "person", args.slow)
         try:
             frame = _capture_face(conf)
         except RuntimeError as exc:

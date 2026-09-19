@@ -1,0 +1,19 @@
+{
+  "name": "sketchbot-studio",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/control.js --bundle --minify --format=esm --outdir=static/dist --loader:.woff2=file --loader:.woff=file --target=es2022 && mkdir -p static/dist/licenses && cp node_modules/three/LICENSE static/dist/licenses/three.txt && cp node_modules/lucide/LICENSE static/dist/licenses/lucide.txt && cp node_modules/@fontsource/space-grotesk/LICENSE static/dist/licenses/space-grotesk.txt",
+    "test": "node --test tests/input.test.mjs",
+    "test:browser": "playwright test"
+  },
+  "dependencies": {
+    "@fontsource/space-grotesk": "^5.2.0",
+    "lucide": "^0.468.0",
+    "three": "^0.180.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "esbuild": "^0.25.0"
+  }
+}

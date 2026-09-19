@@ -24,9 +24,8 @@ deep above the sheet, so a pen even 10 mm longer than `links.wrist_pen_mm`
 presses at every height the arm can reach and no value of `down_z_mm` fixes
 it. Several rounds of "raise it a bit" were spent learning that. Measure it.
 
-Config is written with a targeted regex on the three keys so the comments in
-config/workspace.yaml survive - round-tripping through yaml.dump would strip
-every one of them.
+Changes are saved atomically in config/runtime.yaml, shared with the studio,
+without rewriting the documented defaults in config/workspace.yaml.
 """
 
 from __future__ import annotations
@@ -42,6 +41,7 @@ from typing import Dict, Optional, Tuple
 from sketch_artist import config as cfg
 from sketch_artist.arm_client import ArmClient
 from sketch_artist.kinematics import BraccioKinematics, UnreachableError
+from sketch_artist.paper import paper_to_world
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 WORKSPACE_YAML = cfg.resolve_path("config/workspace.yaml")
@@ -56,27 +56,14 @@ Z_CEIL_MM = 40.0
 
 
 def _write_config_keys(values: Dict[str, float]) -> None:
-    """Rewrite `key: <number>` lines in workspace.yaml, keeping the comments.
-
-    The keys touched here (wrist_pen_mm, down_z_mm, up_z_mm) are unique in the
-    file, so matching on the bare key name is safe.
-    """
-    text = WORKSPACE_YAML.read_text(encoding="utf-8")
+    """Persist calibration values in the same overlay used by the studio."""
+    updates = {}
     for key, value in values.items():
-        pattern = re.compile(rf"^(\s*{re.escape(key)}:\s*)[-+]?\d+(?:\.\d+)?", re.M)
-        if not pattern.search(text):
-            raise KeyError(f"{key} not found in {WORKSPACE_YAML}")
-        rendered = f"{value:g}"
-        text = pattern.sub(lambda m: m.group(1) + rendered, text, count=1)
-    # Temp file + fsync + rename, not write_text: a servo inrush can reset the
-    # whole board at any moment, and an in-place write caught by that reset
-    # left workspace.yaml as a 0-byte file (and the UI unable to start).
-    tmp = WORKSPACE_YAML.with_suffix(".yaml.tmp")
-    with open(tmp, "w", encoding="utf-8") as fh:
-        fh.write(text)
-        fh.flush()
-        os.fsync(fh.fileno())
-    os.replace(tmp, WORKSPACE_YAML)
+        if key not in ("wrist_pen_mm", "down_z_mm", "up_z_mm"):
+            raise KeyError(f"Unsupported calibration setting: {key}")
+        section = "links" if key == "wrist_pen_mm" else "pen"
+        updates.setdefault(section, {})[key] = float(value)
+    cfg.save_overrides({"workspace": updates, "calibration_required": True}, WORKSPACE_YAML.parent)
 
 
 def _reach_band(kin: BraccioKinematics, workspace: dict) -> Tuple[int, int]:
@@ -86,14 +73,14 @@ def _reach_band(kin: BraccioKinematics, workspace: dict) -> Tuple[int, int]:
     the stock 174 mm pen - and it shrinks as wrist_pen_mm grows.
     """
     p = workspace["paper"]
-    x0, y0 = float(p["origin_x_mm"]), float(p["origin_y_mm"])
     w, h = float(p["width_mm"]), float(p["height_mm"])
 
     def all_reach(z: float) -> bool:
         for i in range(6):
             for j in range(6):
                 try:
-                    kin.solve(x0 + w * i / 5, y0 + h * j / 5, z, strict=True)
+                    x, y = paper_to_world(p, w * i / 5, h * j / 5)
+                    kin.solve(x, y, z, strict=True)
                 except UnreachableError:
                     return False
         return True
@@ -130,8 +117,7 @@ class Calibrator:
 
     def paper_centre(self) -> Tuple[float, float]:
         p = self.workspace["paper"]
-        return (float(p["origin_x_mm"]) + float(p["width_mm"]) / 2,
-                float(p["origin_y_mm"]) + float(p["height_mm"]) / 2)
+        return paper_to_world(p, float(p["width_mm"]) / 2, float(p["height_mm"]) / 2)
 
     # -- arm ---------------------------------------------------------------
     def _pose(self, arm: ArmClient):
@@ -251,13 +237,12 @@ class Calibrator:
         """Trace the paper box at the configured down_z: the acceptance test."""
         p = self.workspace["paper"]
         pen = self.workspace["pen"]
-        x0, y0 = float(p["origin_x_mm"]), float(p["origin_y_mm"])
         w, h = float(p["width_mm"]), float(p["height_mm"])
         down, up = float(pen["down_z_mm"]), float(pen["up_z_mm"])
         inset = 3.0
-        corners = [(x0 + inset, y0 + inset), (x0 + w - inset, y0 + inset),
-                   (x0 + w - inset, y0 + h - inset), (x0 + inset, y0 + h - inset),
-                   (x0 + inset, y0 + inset)]
+        corners = [paper_to_world(p, local_x, local_y) for local_x, local_y in
+               ((inset, inset), (w - inset, inset), (w - inset, h - inset),
+                (inset, h - inset), (inset, inset))]
         pts = []
         for (ax, ay), (bx, by) in zip(corners, corners[1:]):
             for k in range(8):

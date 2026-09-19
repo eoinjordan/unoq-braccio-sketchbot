@@ -1,0 +1,56 @@
+name: Software Validation
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Install Python dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements-dev.txt
+      - name: Python unit and integration tests
+        run: .venv/bin/python -m pytest -o addopts='' -q
+      - uses: actions/setup-node@v4
+        if: matrix.python == '3.13'
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build and test browser input
+        if: matrix.python == '3.13'
+        run: |
+          npm --prefix web ci
+          npm --prefix web test
+          npm --prefix web run build
+          git diff --exit-code -- web/static/dist
+      - name: Install Chromium
+        if: matrix.python == '3.13'
+        run: npm --prefix web exec -- playwright install --with-deps chromium
+      - name: Browser functional tests with software arm
+        if: matrix.python == '3.13'
+        run: npm --prefix web run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.python == '3.13'
+        with:
+          name: studio-browser-evidence
+          path: |
+            output/studio-*.png
+            output/browser-tests/
+          if-no-files-found: ignore

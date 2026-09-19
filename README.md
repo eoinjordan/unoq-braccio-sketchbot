@@ -1,10 +1,16 @@
-# Edge Impulse Sketchbot (UNO Q + Braccio)
+# Edge Impulse Sketchbot Studio (UNO Q + Braccio)
 
-A live "sketchbot" demo: a **TinkerKit Braccio** arm driven by an **Arduino
-UNO Q** takes a photo of a visitor, turns it into a line-art caricature, and
-**draws it with a real pencil** on an Edge Impulse–branded postcard. Finished
-sketches appear on a branded **live web gallery**, exactly like a trade-show
-Sketchbot wall.
+A **TinkerKit Braccio** and **Arduino UNO Q** studio for portrait sketching and
+supervised pick-and-place. Switch between a calibrated pen and gripper, preview
+the real tool geometry in Three.js, and use touch controls or a paired gamepad.
+ESP32 and USB cameras provide independent face and work-area views.
+
+![Sketch mode with the interactive Braccio model and task controls](docs/images/studio-desktop.png)
+
+The screenshots use the isolated software arm. Hardware camera feeds and small
+guarded arm commands have been checked on the UNO Q; physical pen contact,
+completed ink drawings and real-object pick-and-place still require supervised
+calibration. See [validation status](docs/validation.md).
 
 <p align="center">
   <img src="docs/images/hardware-arm.jpg" width="360" alt="TinkerKit Braccio drawing through the 3D-printed pencil grip"><br>
@@ -12,19 +18,7 @@ Sketchbot wall.
 </p>
 
 
-<img width="1468" height="1226" alt="image" src="https://github.com/user-attachments/assets/ce3979b6-4087-427d-b4b2-44b041321ee8" />
-
-
-<img width="1575" height="803" alt="image" src="https://github.com/user-attachments/assets/9333462d-fc6e-4a82-adbd-92492d693beb" />
-
-
-<img width="1650" height="1433" alt="image" src="https://github.com/user-attachments/assets/b9662f78-6514-448e-8e65-c687678afa6e" />
-
-
-
-<img width="1800" height="1822" alt="image" src="https://github.com/user-attachments/assets/0460f688-38cf-4082-8923-3eaf0989cadf" />
-
-<img width="1679" height="936" alt="image" src="https://github.com/user-attachments/assets/cd5d7fb7-3e27-4e78-991f-71b35f6dbbc4" />
+![Gripper mode with separate pick and place targets](docs/images/studio-gripper.png)
 
 
 ```
@@ -40,8 +34,8 @@ Sketchbot wall.
 
 ## What it does
 
-1. **Capture** – aim the **wrist-mounted camera** at the visitor (the arm moves
-   to a "person" pose) and grab a frame.
+1. **Capture** - use a fixed face camera, or aim a configured wrist camera at
+  the visitor. Dry-run, no-arm and simulation modes never aim the physical arm.
 2. **Portrait → caricature line art** – detect the face, **segment the person**
    (GrabCut) so a busy background is dropped, then draw the face with a small
    **image-to-image model** (17 MB, CPU-only) that puts the eyes, nose and mouth
@@ -57,14 +51,75 @@ Sketchbot wall.
    find the paper corners (homography) so drawings land on the branded box.
 7. **Gallery** – composite the finished sketch onto the Edge Impulse postcard
    template and publish it to the **live web gallery** page.
+8. **Pick and place** - configure gripper length, elevation, jaw angles, pick
+  and place coordinates, and transfer height. Preview the nine-step sequence,
+  then advance it with a held control after fitting and confirming the tool.
+
+## Sketchbot Studio
+
+The web app now includes an interactive **Three.js Braccio model**, touch joint
+controls, Bluetooth/USB gamepad input, two camera previews and a setup menu.
+The gallery remains available at `/gallery`.
+
+Choose **Sketch** or **Gripper** independently of **Preview / Real arm**.
+Changing tools disarms the session and preserves the saved sketch calibration.
+**Plan test square** prepares a small drawing test; **Plan pick & place** prepares
+approach, open, lower, grip, lift, transfer, lower, release and retract steps.
+Planning and playback do not send hardware commands. **Hold to run** sends one
+bounded step at a time; releasing pauses it and Stop cancels it.
+
+```bash
+.venv/bin/python -m web.server --bind 127.0.0.1 --port 7100
+# Open http://localhost:7100. Hardware motion is disabled by default.
+```
+
+**Setup** configures camera source, fixed/wrist mounting, rotation, mirroring,
+resolution and USB pixel format; paper side/position/size; arm geometry and
+servo limits; and controller axes, buttons, deadzone and speed. ESP32 snapshots,
+MJPEG, RTSP, USB video and the supplied ESP serial protocol are supported.
+
+Startup checks the arm, USB devices, vision capabilities and paper reachability.
+It always starts in preview mode and disarmed; new settings default to child
+mode enabled, while saved operator preferences are retained. Menu values
+are saved atomically in the ignored `config/runtime.yaml`, shared with the CLI
+and calibration page, without replacing the documented YAML defaults.
+
+```bash
+.venv/bin/python scripts/check_hardware.py --probe-cameras
+.venv/bin/python -m pytest
+npm --prefix web install
+npm --prefix web test
+npm --prefix web run build
+npm --prefix web exec -- playwright install chromium
+npm --prefix web run test:browser
+```
+
+For supervised physical control, start the server with `--allow-motion`, choose
+**Real arm**, and explicitly arm the controls. Child mode limits moves to 0.75
+degrees and keeps the modelled pen above the paper. These checks are not a
+collision detector or a power cutoff. Bluetooth controllers pair with the
+computer/tablet, then use the browser Gamepad API on localhost or HTTPS.
+
+See [the Studio guide](docs/studio.md) for camera formats, paper-side coordinates,
+controller mappings, SSH camera forwarding and the isolated test harness.
+
+<p align="center">
+  <img src="docs/images/studio-mobile.png" width="300" alt="Sketch controls on a mobile viewport">
+  <img src="docs/images/studio-gripper-mobile.png" width="300" alt="Gripper task controls on a mobile viewport">
+</p>
+
+The [CI workflow](.github/workflows/test.yml) runs Python tests on Python 3.11
+and 3.13, verifies the offline web build, and runs controller and Playwright
+tests without hardware. See [validation status](docs/validation.md) for the
+remaining physical checks.
 
 ## Hardware
 
 | Role   | Device                                                 | USB ID        |
 | ------ | ------------------------------------------------------ | ------------- |
-| Camera | **One** wrist camera — a USB webcam, or an **ESP-EYE** over Wi-Fi/USB (`firmware/esp_eye_camera/`) | set in config |
+| Camera | One shared wrist camera, or separate fixed face and observation cameras; ESP32 snapshot/stream or USB | set in Setup |
 | Arm    | Arduino UNO Q + TinkerKit Braccio                      | —             |
-| Pen    | 3D-printed drawing grip (see `hardware/pencil-grip/`)  | —             |
+| Tool   | 3D-printed pen grip, or Braccio gripper with measured grasp-point geometry | set in Setup |
 
 **One camera does both jobs**: the arm points the wrist camera at the visitor to
 capture, then at the paper to calibrate (poses in `config/workspace.yaml`
@@ -174,15 +229,15 @@ python3 -m venv .venv
 .venv/bin/python -m sketch_artist.cli
 ```
 
-Start the branded live gallery on its own (port `7100`):
+Start the studio and branded live gallery (port `7100`, gallery at `/gallery`):
 
 ```bash
-./scripts/run_demo.sh gallery       # http://<uno-q>:7100
+./scripts/run_demo.sh gallery       # http://<uno-q>:7100/gallery
 ```
 
 <p align="center">
-  <img src="docs/images/gallery-live.jpg" width="640" alt="Edge Impulse Sketchbot live gallery web page"><br>
-  <em>The branded live gallery — finished sketches appear here in real time.</em>
+  <img src="docs/images/studio-gallery.png" width="800" alt="Current gallery interface with an explicitly labelled simulation preview"><br>
+  <em>The gallery interface. This example card is a simulation preview, not a photographed physical drawing.</em>
 </p>
 
 Or bring the whole thing up with Docker (cameras + arm reach + gallery):

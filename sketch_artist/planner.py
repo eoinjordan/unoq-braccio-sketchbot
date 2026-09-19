@@ -7,6 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Tuple
 
+from .paper import paper_to_world
 from .vectorize import Stroke, bounding_box
 
 Point = Tuple[float, float]
@@ -47,9 +48,8 @@ def _to_mm(pt: Point, scale: float, off_x: float, off_y: float,
     # Map pixel coords into paper millimetres. Both axes are mapped without
     # flipping; the arm coordinate frame is configured via workspace.yaml
     # (paper origin_x/y and servo_calibration signs).
-    mm_x = float(paper["origin_x_mm"]) + off_x + (x - src_min_x) * scale
-    mm_y = float(paper["origin_y_mm"]) + off_y + (y - src_min_y) * scale
-    return mm_x, mm_y
+    return paper_to_world(paper, off_x + (x - src_min_x) * scale,
+                          off_y + (y - src_min_y) * scale)
 
 
 def _order_strokes(strokes: List[Stroke]) -> List[Stroke]:
