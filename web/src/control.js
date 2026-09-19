@@ -455,6 +455,8 @@ async function refreshState() {
   if (token && !incoming.armed) { token = null; stopHolding(); gamepadGate.reset(); }
   const connection = element("connection");
   connection.className = `status ${incoming.arm.connected ? "connected" : "disconnected"}`;
+  connection.setAttribute("role", "status");
+  connection.setAttribute("aria-label", incoming.arm.connected ? "Arm connected" : "Arm offline");
   connection.innerHTML = `<span class="dot"></span>${incoming.arm.connected ? "Arm connected" : "Arm offline"}`;
   connection.title = incoming.arm.error || "Commanded joint targets; not encoder feedback";
   if (JSON.stringify(limits) !== JSON.stringify(incoming.limits)) { limits = incoming.limits; renderJoints(); }
@@ -486,6 +488,7 @@ async function pollState() {
     token = null; stopHolding(); gamepadGate.reset();
     if (state) state.arm.connected = false;
     element("connection").className = "status disconnected";
+    element("connection").setAttribute("aria-label", "Connection lost");
     element("connection").innerHTML = '<span class="dot"></span>Connection lost';
     updateButtons();
   } finally { setTimeout(pollState, 1300); }
@@ -495,7 +498,7 @@ async function runChecks(probe = false) {
   try {
     const report = await api(`/api/control/diagnostics${probe ? "?probe=1" : ""}`);
     deviceReport = report.devices;
-    const select = element("detected-cameras"); select.replaceChildren(new Option("Custom input", ""));
+    const select = element("detected-cameras"); select.textContent = ""; select.add(new Option("Custom input", ""));
     report.devices.forEach((device, index) => select.add(new Option(device.label, String(index))));
     element("startup-summary").textContent = `${report.arm.connected ? "Arm available" : "Preview only"} / ${report.devices.length} USB camera${report.devices.length === 1 ? "" : "s"} / ${report.paper.ok ? "workspace valid" : "workspace needs attention"}`;
     if (probe) notice(`Checks complete. Face: ${report.cameras.face.ok ? "available" : "unavailable"}; paper: ${report.cameras.gripper.ok ? "available" : "unavailable"}. No motion sent.`);
@@ -542,7 +545,7 @@ function gamepadTick() {
   const identity = pads.map(pad => `${pad.index}:${pad.id}`).join("|");
   if (identity !== padIdentity) {
     padIdentity = identity; gamepadGate.reset();
-    const select = element("controller-device"); select.replaceChildren(new Option("First connected controller", "auto"));
+    const select = element("controller-device"); select.textContent = ""; select.add(new Option("First connected controller", "auto"));
     pads.forEach(pad => select.add(new Option(pad.id, String(pad.index))));
     select.value = selectedPad;
   }

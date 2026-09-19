@@ -7,7 +7,7 @@ the Playwright functional suite. Browser tests start an isolated software arm
 and temporary settings; they do not connect to the real robot.
 
 Local validation on 2026-09-19: **171 Python tests**, **18 JavaScript unit tests**
-and **20 Playwright tests**. Python ran in the project's macOS virtual environment;
+and **21 Playwright tests**. Python ran in the project's macOS virtual environment;
 the CI matrix below additionally covers Python 3.11 and 3.13 on Linux.
 
 ```bash
@@ -74,6 +74,12 @@ Its Android APK installed and launched, but the screen connection check failed.
 A browser reproduction confirmed the same failure when `AbortSignal.timeout`
 is unavailable. Version 0.3.1 uses portable `AbortController` deadlines and adds
 a regression for that WebView case; its native runtime check is a separate run.
+
+The 0.3.1 emulator screenshot confirmed a connected Studio and a rendered 3D
+arm. The check then exposed a connection-label accessibility mismatch, and its
+WebView 83 log showed an unsupported `replaceChildren` call on the launcher.
+Version 0.3.2 uses compatible DOM updates and an explicit accessible connection
+status, with browser regressions for both cases.
 
 The installed RoboServo 1.2.0 library uses 10-bit PWM duty conversion at 50 Hz:
 19.55 microseconds per tick, approximately 1.76 degrees with the configured

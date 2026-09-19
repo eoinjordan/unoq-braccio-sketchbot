@@ -1,13 +1,15 @@
 import { test, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
 
 const setup = "http://127.0.0.1:7121/";
 const repository = "https://github.com/eoinjordan/unoq-braccio-sketchbot";
+const { version } = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
 test.beforeEach(async ({ page }) => {
   await page.route("https://api.github.com/repos/eoinjordan/unoq-braccio-sketchbot/releases/latest", route => route.fulfill({
-    contentType: "application/json", body: JSON.stringify({ tag_name: "v0.3.1", html_url: `${repository}/releases/tag/v0.3.1`,
-      assets: ["Sketchbot-Tablet-0.3.1.apk", "Sketchbot-Launcher-0.3.1.msi", "Sketchbot-Source-0.3.1.tar.gz"].map(name => ({
-        name, size: 100000, browser_download_url: `${repository}/releases/download/v0.3.1/${name}`,
+    contentType: "application/json", body: JSON.stringify({ tag_name: `v${version}`, html_url: `${repository}/releases/tag/v${version}`,
+      assets: [`Sketchbot-Tablet-${version}.apk`, `Sketchbot-Launcher-${version}.msi`, `Sketchbot-Source-${version}.tar.gz`].map(name => ({
+        name, size: 100000, browser_download_url: `${repository}/releases/download/v${version}/${name}`,
       })) }),
   }));
 });
@@ -43,11 +45,23 @@ test("public installer requires explicit firmware confirmation and defaults to n
   await expect(page.getByRole("button", { name: "Copy install command", exact: true })).toBeEnabled();
 });
 
+test("older Android WebView can remember devices and load downloads", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(Element.prototype, "replaceChildren", { configurable: true, value: undefined });
+    Object.defineProperty(AbortSignal, "timeout", { configurable: true, value: undefined });
+  });
+  await page.goto(setup);
+  await page.getByLabel("UNO Q address").fill("unoq.local");
+  await page.getByRole("button", { name: "Remember", exact: true }).click();
+  await expect(page.locator(".saved-device")).toHaveCount(1);
+  await expect(page.locator('[data-package="apk"]')).toHaveAttribute("href", /\/releases\/download\//);
+});
+
 test("public page renders verified release links and responsive desktop/mobile assets", async ({ page }) => {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(setup);
-  await expect(page.locator('[data-package="apk"]')).toHaveAttribute("href", /releases\/download\/v0.3.1\/.*\.apk/);
+  await expect(page.locator('[data-package="apk"]')).toHaveAttribute("href", `${repository}/releases/download/v${version}/Sketchbot-Tablet-${version}.apk`);
   await expect.poll(() => page.locator(".preview img").evaluate(image => image.naturalWidth)).toBeGreaterThan(100);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.evaluate(() => Promise.all(document.getAnimations().map(animation => animation.finished)));

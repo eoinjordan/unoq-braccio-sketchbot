@@ -44,7 +44,7 @@ function refreshAddress() {
   }
 }
 function renderDevices() {
-  byId("saved-devices").replaceChildren();
+  byId("saved-devices").textContent = "";
   devices.forEach((device, index) => {
     const row = document.createElement("div"); row.className = "saved-device";
     row.innerHTML = '<i data-lucide="bot"></i><a target="_blank" rel="noopener noreferrer"><strong></strong><small></small></a><button class="icon-button" title="Forget device" aria-label="Forget device"><i data-lucide="trash-2"></i></button>';

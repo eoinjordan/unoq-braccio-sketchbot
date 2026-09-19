@@ -43,8 +43,11 @@ test("desktop renders the real 3D scene, local assets and disarmed defaults", as
 test("Android WebView without AbortSignal.timeout can connect to Studio", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(AbortSignal, "timeout", { configurable: true, value: undefined });
+    Object.defineProperty(Element.prototype, "replaceChildren", { configurable: true, value: undefined });
   });
   await ready(page);
+  await expect(page.getByRole("status", { name: "Arm connected", exact: true })).toBeVisible();
+  await expect(page.locator("#startup-summary")).toContainText("Arm available");
   await expect(page.getByRole("button", { name: "Hold to move" })).toBeDisabled();
 });
 
