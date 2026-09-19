@@ -39,6 +39,7 @@ with tempfile.TemporaryDirectory(prefix="sketchbot-browser-") as directory:
         server = ThreadingHTTPServer(("127.0.0.1", 7119), Handler)
         server.control = app
         try:
+            print("SKETCHBOT_TEST_SERVER_READY", flush=True)
             server.serve_forever()
         finally:
             app.close()

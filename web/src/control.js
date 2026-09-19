@@ -2,13 +2,14 @@ import "@fontsource/space-grotesk/latin-400.css";
 import "@fontsource/space-grotesk/latin-600.css";
 import { createIcons, Bot, Settings2, Box, Radio, ShieldCheck, Gamepad2, LockKeyhole, Square,
   RotateCcw, Scan, ZoomIn, ZoomOut, UserRound, SlidersHorizontal, Camera, Pencil,
-  Crosshair, Hand, Activity, X, Save, UnlockKeyhole, Minus, Plus, Grab, Play, ListChecks, MapPin } from "lucide";
+  Crosshair, Hand, Activity, X, Save, UnlockKeyhole, Minus, Plus, Grab, Play, ListChecks, MapPin, Video, Trash2, Download } from "lucide";
 import { createRobotView } from "./robot.js";
 import { boundedPose, GamepadGate, jointNames } from "./input.js";
+import { installTabletCameraControls } from "./tablet.js";
 
 const icons = { Bot, Settings2, Box, Radio, ShieldCheck, Gamepad2, LockKeyhole, Square,
   RotateCcw, Scan, ZoomIn, ZoomOut, UserRound, SlidersHorizontal, Camera, Pencil,
-  Crosshair, Hand, Activity, X, Save, UnlockKeyhole, Minus, Plus, Grab, Play, ListChecks, MapPin };
+  Crosshair, Hand, Activity, X, Save, UnlockKeyhole, Minus, Plus, Grab, Play, ListChecks, MapPin, Video, Trash2, Download };
 const element = id => document.getElementById(id);
 const queryAll = selector => [...document.querySelectorAll(selector)];
 const labels = ["Base", "Shoulder", "Elbow", "Wrist tilt", "Wrist rotation", "Gripper"];
@@ -18,6 +19,7 @@ let limits = [[0, 180], [15, 165], [3, 180], [17, 180], [0, 180], [10, 110]];
 let state = null;
 let mode = "preview";
 let token = null;
+let armingPending = false;
 let controlGeneration = 0;
 let selectedJoint = 0;
 let targetEdited = false;
@@ -34,6 +36,11 @@ let taskPlan = null;
 let previewTimer = null;
 const frameUrls = {};
 const gamepadGate = new GamepadGate();
+const eventView = new URLSearchParams(location.search).get("event") === "1";
+document.body.classList.toggle("event-view", eventView);
+const tabletCameras = installTabletCameraControls({ getState: () => state, notify: message => notice(message),
+  refreshIcons: () => createIcons({ icons }) });
+element("camera-format").append(new Option("This tablet / phone", "tablet"));
 
 function notice(message) {
   element("notice").textContent = message;
@@ -68,11 +75,16 @@ async function disarm(report = false) {
     if (report) notice("Stopped and disarmed. Servo power remains on.");
   } catch { if (report) notice("Stop not confirmed. Use the physical power cutoff if needed."); }
 }
+function releaseOwnedSession() {
+  stopHolding(); gamepadGate.reset();
+  if (token || armingPending) return disarm();
+}
 function updateButtons() {
   const ownArmed = Boolean(token && mode === "real");
   const armButton = element("arm-button");
   armButton.disabled = mode !== "real" || !state?.motion_enabled || !state?.arm.connected ||
-    (state?.tools.active === "sketch" && !state?.paper_check.ok) || Boolean(state?.armed && !token);
+    (state?.tools.active === "sketch" && !state?.paper_check.ok) || Boolean(state?.armed && !token) ||
+    (eventView && !state?.controls.child_mode);
   armButton.classList.toggle("armed", ownArmed);
   armButton.querySelector("span").textContent = ownArmed ? "Armed" : "Disarmed";
   armButton.setAttribute("aria-label", ownArmed ? "Armed" : "Disarmed");
@@ -138,6 +150,7 @@ function bindHold(button, action) {
 }
 async function sendMotion(payload) {
   if (motionPending || !token || mode !== "real" || document.hidden) return;
+  if (eventView && !state?.controls.child_mode) { await disarm(); notice("Event controls require child mode enabled by the operator."); return; }
   motionPending = true;
   try {
     const result = await api("/api/control/move", { ...payload, token, held: true });
@@ -274,6 +287,7 @@ element("operator-confirmed").onchange = confirmEnabled;
 element("tool-confirmed").onchange = confirmEnabled;
 element("confirm-arm").onclick = async () => {
   const generation = ++controlGeneration;
+  armingPending = true;
   element("confirm-arm").disabled = true;
   try {
     const result = await api("/api/control/arm", { confirmed: element("operator-confirmed").checked,
@@ -282,7 +296,7 @@ element("confirm-arm").onclick = async () => {
     controlGeneration++;
     token = result.token; gamepadGate.reset(); element("arm-confirm").close(); updateButtons();
   } catch (error) { notice(error.message); }
-  finally { confirmEnabled(); }
+  finally { armingPending = false; confirmEnabled(); }
 };
 queryAll(".close-dialog").forEach(button => button.onclick = () => {
   if (button.closest("dialog").id === "arm-confirm") disarm();
@@ -292,11 +306,12 @@ queryAll("dialog").forEach(dialog => dialog.addEventListener("close", () => { st
 document.addEventListener("keydown", event => { if (event.key === "Escape") disarm(); });
 document.addEventListener("keyup", event => { if ([" ", "Enter"].includes(event.key)) stopHolding(); });
 window.addEventListener("pointerup", stopHolding);
-window.addEventListener("blur", () => disarm());
-document.addEventListener("visibilitychange", () => { if (document.hidden) disarm(); });
+window.addEventListener("blur", releaseOwnedSession);
+document.addEventListener("visibilitychange", () => { if (document.hidden) releaseOwnedSession(); });
 window.addEventListener("pagehide", () => {
-  token = null; stopHolding();
-  navigator.sendBeacon("/api/control/stop", new Blob(["{}"], { type: "application/json" }));
+  const ownedSession = Boolean(token || armingPending);
+  controlGeneration++; token = null; stopHolding();
+  if (ownedSession) navigator.sendBeacon("/api/control/stop", new Blob(["{}"], { type: "application/json" }));
 });
 
 function settingsTab(name) {
@@ -331,7 +346,7 @@ function fillCameraForm() {
 }
 function cameraFields() {
   const format = element("camera-format").value;
-  element("url-field").hidden = ["usb", "serial"].includes(format);
+  element("url-field").hidden = ["usb", "serial", "tablet"].includes(format);
   element("usb-fields").hidden = format !== "usb";
   element("serial-fields").hidden = format !== "serial";
 }
@@ -431,6 +446,7 @@ async function refreshState() {
   catch (error) { if (generation !== controlGeneration) return; throw error; }
   if (generation !== controlGeneration) return;
   state = incoming;
+  tabletCameras.update();
   if (taskPlan && incoming.task?.id === taskPlan.id) Object.assign(taskPlan, incoming.task);
   else if (taskPlan && !taskPlan.complete && !incoming.task && !motionPending) { taskPlan = null; clearTimeout(previewTimer); }
   if (token && !incoming.armed) { token = null; stopHolding(); gamepadGate.reset(); }
@@ -453,6 +469,7 @@ async function refreshState() {
   if (gripperMode) element("model-status").textContent = "Grasp-point preview";
   element("child-state").hidden = !incoming.controls.child_mode;
   element("calibration-status").textContent = incoming.calibration_required ? "Calibration unverified" : "Calibration verified";
+  if (eventView && !incoming.controls.child_mode) element("calibration-status").textContent = "Operator: enable child mode";
   for (const role of ["face", "gripper"]) element(`${role}-mount`).textContent = incoming.cameras[role]?.mounted_on_arm === false ? "Fixed" : "Wrist";
   if (!initialized) {
     if (incoming.arm.pose) pose = [...incoming.arm.pose];
@@ -498,6 +515,7 @@ async function pollCamera(role) {
     image.hidden = false; element(`${role}-empty`).hidden = true;
     element(`${role}-status`).textContent = role === "face" ? (response.headers.get("X-Face-Detected") === "1" ? "Live / face detected" : "Live / no face detected") : `Live / ${image.naturalWidth} x ${image.naturalHeight}`;
     if (role === "face" && response.headers.get("X-Face-Detector") === "0") element(`${role}-status`).textContent = "Live / detector unavailable";
+    if (response.headers.get("X-Camera-Source") === "tablet") element(`${role}-status`).textContent = `Tablet frame / ${image.naturalWidth} x ${image.naturalHeight}`;
     element(`${role}-status`).title = "";
   } catch (error) {
     element(`${role}-frame`).hidden = true; element(`${role}-empty`).hidden = false;
@@ -514,7 +532,8 @@ queryAll(".capture").forEach(button => button.onclick = () => {
 function gamepadTick() {
   let pads = [];
   try { pads = [...(navigator.getGamepads?.() || [])].filter(Boolean); }
-  catch { element("gamepad-label").textContent = "Controller unavailable"; return; }
+  catch { pads = []; }
+  if (window.__sketchbotNativePad?.connected) pads = [window.__sketchbotNativePad];
   const identity = pads.map(pad => `${pad.index}:${pad.id}`).join("|");
   if (identity !== padIdentity) {
     padIdentity = identity; gamepadGate.reset();
@@ -540,7 +559,7 @@ function gamepadTick() {
     targetEdited = false; sendMotion({ angles: boundedPose(state.arm.pose, deltas, limits, maximum) });
   } else { targetEdited = true; pose = boundedPose(pose, deltas, limits, maximum); renderPose(); }
 }
-window.addEventListener("gamepaddisconnected", () => disarm());
+window.addEventListener("gamepaddisconnected", releaseOwnedSession);
 window.addEventListener("gamepadconnected", () => { gamepadGate.reset(); });
 setInterval(() => { applyHeld(); gamepadTick(); }, 200);
 createIcons({ icons });

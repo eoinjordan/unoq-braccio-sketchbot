@@ -39,7 +39,9 @@ jobs:
           npm --prefix web ci
           npm --prefix web test
           npm --prefix web run build
+          npm --prefix web run build:site
           git diff --exit-code -- web/static/dist
+          git diff --exit-code -- site/assets site/install.sh
       - name: Install Chromium
         if: matrix.python == '3.13'
         run: npm --prefix web exec -- playwright install --with-deps chromium

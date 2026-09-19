@@ -108,3 +108,36 @@ def test_camera_and_paper_menu_save_roundtrip(web_app):
     code, state = request(base, "/api/control/state")
     assert state["workspace"]["paper"]["rotation_deg"] == -60
     assert state["cameras"]["face"]["mounted_on_arm"] is False
+
+
+def test_tablet_camera_http_upload_and_clear_are_read_only_for_arm(web_app):
+    import cv2
+    import numpy as np
+    base, app, agent = web_app
+    count = agent.simulator.move_count
+    assert request(base, "/api/settings/camera", {"role": "face", "spec": {"format": "tablet"}})[0] == 200
+    _, encoded = cv2.imencode(".jpg", np.zeros((64, 96, 3), dtype=np.uint8))
+    upload = urllib.request.Request(base + "/api/camera-input/face", data=encoded.tobytes(),
+                                   headers={"Content-Type": "image/jpeg", "Origin": base})
+    with urllib.request.urlopen(upload, timeout=5) as response:
+        assert response.status == 200
+        assert json.load(response)["expires_seconds"] == 300
+    with urllib.request.urlopen(base + "/api/camera/face.jpg", timeout=5) as response:
+        assert response.headers["X-Camera-Source"] == "tablet"
+        assert response.read().startswith(b"\xff\xd8")
+    assert request(base, "/api/camera-input/clear", {"role": "face"})[0] == 200
+    with pytest.raises(urllib.error.HTTPError) as failed:
+        urllib.request.urlopen(base + "/api/camera-input/face.jpg", timeout=5)
+    assert failed.value.code == 503
+    assert agent.simulator.move_count == count
+
+
+def test_camera_upload_rejects_cross_origin_and_non_images(web_app):
+    base, app, agent = web_app
+    for headers, expected in (({"Content-Type": "image/jpeg", "Origin": "https://outside.example"}, 403),
+                              ({"Content-Type": "text/html"}, 415)):
+        call = urllib.request.Request(base + "/api/camera-input/face", data=b"not an image", headers=headers)
+        with pytest.raises(urllib.error.HTTPError) as failed:
+            urllib.request.urlopen(call, timeout=5)
+        assert failed.value.code == expected
+    assert not app.tablet_frames

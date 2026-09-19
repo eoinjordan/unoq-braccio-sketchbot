@@ -77,8 +77,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, body, "image/jpeg", {
                     "X-Face-Detected": int(health["face_detected"]),
                     "X-Face-Detector": int(health["face_detection_available"]),
+                    "X-Camera-Source": health["source"],
                 })
             except Exception as exc:
+                return self._json(503, {"error": str(exc)})
+        if path in ("/api/camera-input/face.jpg", "/api/camera-input/gripper.jpg"):
+            try:
+                data, _ = self.server.control.tablet_frame(path.split("/")[-1].split(".")[0])
+                return self._send(200, data, "image/jpeg")
+            except (ValueError, RuntimeError) as exc:
                 return self._json(503, {"error": str(exc)})
         if path == "/style.css":
             return self._serve_static("style.css", "text/css")
@@ -96,6 +103,17 @@ class Handler(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin")
         if (origin and urlsplit(origin).netloc != self.headers.get("Host")) or self.headers.get("Sec-Fetch-Site") == "cross-site":
             return self._json(403, {"error": "Cross-origin control is not allowed"})
+        if path in ("/api/camera-input/face", "/api/camera-input/gripper"):
+            try:
+                size = int(self.headers.get("Content-Length", "0"))
+                if not 0 < size <= 4_000_000:
+                    return self._json(413, {"error": "Camera image must be at most 4 MB"})
+                if self.headers.get_content_type() not in ("image/jpeg", "image/png"):
+                    return self._json(415, {"error": "Expected JPEG or PNG"})
+                result = self.server.control.receive_tablet_frame(path.split("/")[-1], self.rfile.read(size))
+                return self._json(200, result)
+            except ValueError as exc:
+                return self._json(422, {"error": str(exc)})
         if self.headers.get_content_type() != "application/json":
             return self._json(415, {"error": "Expected application/json"})
         try:
@@ -117,6 +135,7 @@ class Handler(BaseHTTPRequestHandler):
                 "/api/settings/workspace": lambda: app.save_workspace(body),
                 "/api/settings/controls": lambda: app.save_controls(body),
                 "/api/settings/camera": lambda: app.save_camera(body.get("role"), body.get("spec")),
+                "/api/camera-input/clear": lambda: app.clear_tablet_frame(body.get("role")),
             }
             if path not in actions:
                 return self._json(404, {"error": "Unknown action"})
@@ -175,7 +194,8 @@ class Handler(BaseHTTPRequestHandler):
 def main(port: int = 7100, bind="0.0.0.0", arm_host="127.0.0.1", arm_port=8765,
          allow_motion=False) -> int:
     server = ThreadingHTTPServer((bind, port), Handler)
-    server.control = ControlApp(arm_host, arm_port, allow_motion=allow_motion)
+    server.control = ControlApp(arm_host, arm_port, allow_motion=allow_motion,
+                                camera_base_url=f"http://127.0.0.1:{server.server_port}")
     report = server.control.diagnostics()
     print(f"Sketchbot studio on http://{bind}:{port}; motion {'available but disarmed' if allow_motion else 'disabled'}")
     print(json.dumps({"arm_connected": report["arm"]["connected"], "paper_reachable": report["paper"]["ok"],

@@ -1,0 +1,84 @@
+name: Check Release Installers
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to verify
+        required: true
+        default: v0.3.0
+
+permissions:
+  contents: read
+
+jobs:
+  android-controller:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install isolated simulator dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements.txt
+      - name: Download published APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: gh release download "$RELEASE_TAG" --repo "${{ github.repository }}" --pattern '*.apk' --dir packages
+      - name: Enable runner virtualization
+        run: sudo -n chmod 666 /dev/kvm
+      - name: APK install and event-screen smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          profile: Nexus 9
+          emulator-options: -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -camera-back emulated -camera-front emulated
+          script: .venv/bin/python scripts/check_android.py packages/*.apk --serial emulator-5554
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-controller-evidence
+          path: output/android-check/
+          if-no-files-found: ignore
+  windows-installer:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download published MSI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: gh release download "$env:RELEASE_TAG" --repo "${{ github.repository }}" --pattern "*.msi" --dir packages
+      - name: Install, inspect and uninstall the per-user launcher
+        shell: pwsh
+        run: |
+          $msi = (Get-ChildItem packages/*.msi | Select-Object -First 1).FullName
+          $process = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /norestart /L*v install.log" -Wait -PassThru
+          if ($process.ExitCode -notin @(0, 3010)) { Get-Content install.log -Tail 80; throw "Install failed: $($process.ExitCode)" }
+          $launcher = Join-Path $env:LOCALAPPDATA 'Sketchbot Studio/Sketchbot Studio.url'
+          if (!(Test-Path $launcher)) { throw 'Launcher file not installed in the user profile' }
+          if (!(Select-String -Path $launcher -SimpleMatch 'https://eoinjordan.github.io/unoq-braccio-sketchbot/')) { throw 'Unexpected launcher target' }
+          $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Sketchbot Studio.lnk'
+          if (!(Test-Path $shortcut)) { throw 'Start Menu shortcut missing' }
+          $process = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /norestart /L*v uninstall.log" -Wait -PassThru
+          if ($process.ExitCode -notin @(0, 3010)) { throw "Uninstall failed: $($process.ExitCode)" }
+          if (Test-Path $launcher) { throw 'Launcher was not removed' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-installer-logs
+          path: '*.log'
+          if-no-files-found: ignore

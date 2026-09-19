@@ -97,13 +97,20 @@ start`. Install or repair it with:
 mkdir -p ~/.config/systemd/user ~/bin
 cp app_lab/braccio_remote_agent/braccio-agent.service ~/.config/systemd/user/
 cp app_lab/braccio_remote_agent/braccio-agent-start.sh ~/bin/ && chmod +x ~/bin/braccio-agent-start.sh
-cp app_lab/braccio_remote_agent/braccio-calibrate.service ~/.config/systemd/user/
-systemctl --user daemon-reload && systemctl --user enable --now braccio-agent.service braccio-calibrate.service
+cp app_lab/braccio_remote_agent/sketchbot-studio.service ~/.config/systemd/user/
+systemctl --user disable --now braccio-calibrate.service
+systemctl --user daemon-reload
+systemctl --user enable --now braccio-agent.service sketchbot-studio.service
 ```
 
-`braccio-calibrate.service` brings up the pen calibration page on **:7200** after
-the agent (see *Calibrating the pen* in the repo README). It restarts itself if
-it falls over.
+`sketchbot-studio.service` brings up the persistent Studio page on **:7100**
+with hardware motion disabled by default. Unlike a transient `systemd-run`
+unit, the installed unit survives reboot. See the [Studio guide](../../docs/studio.md)
+for explicit supervised motion opt-in and reconnecting SSH camera forwarding.
+
+`braccio-calibrate.service` is the legacy calibration page on **:7200**. Keep
+it disabled while Studio is active; the Studio unit declares a conflict so
+both control interfaces cannot run at the same time.
 
 **Park the arm before you power off.** At boot the MCU commands the rest pose
 `90 45 180 180 90 10`. If the arm is already there, boot moves nothing; if it is

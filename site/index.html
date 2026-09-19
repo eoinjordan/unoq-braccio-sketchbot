@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#087f60">
+  <meta name="description" content="Install Sketchbot Studio on an Arduino UNO Q and connect a tablet, camera or controller.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" href="./assets/icon-192.png">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png">
+  <link rel="stylesheet" href="./assets/setup.css">
+  <link rel="stylesheet" href="./style.css">
+  <title>Sketchbot Studio / Setup</title>
+</head>
+<body>
+  <header class="masthead"><a class="brand" href="./"><span class="brand-icon"><i data-lucide="bot"></i></span><span>Sketchbot <b>Studio</b></span></a><nav><a href="#install">Install</a><a href="#downloads">Downloads</a><a href="https://github.com/eoinjordan/unoq-braccio-sketchbot" target="_blank" rel="noopener noreferrer" aria-label="Source on GitHub" title="Source on GitHub"><i data-lucide="github"></i></a></nav></header>
+  <main>
+    <div class="title-row"><div><p class="eyebrow">ARDUINO UNO Q / BRACCIO</p><h1>Sketchbot Studio</h1></div><span class="release-tag" id="release-version">Setup & connection</span></div>
+    <section class="connect-layout" aria-labelledby="connect-heading">
+      <div class="connect-form"><div class="section-heading"><span class="step">01</span><h2 id="connect-heading">Connect a device</h2></div>
+        <form id="device-form"><label>UNO Q address<input id="device-address" type="text" inputmode="url" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="unoq.local or 192.168.1.42" required></label><label>Device name<input id="device-name" type="text" maxlength="60" placeholder="Workshop Sketchbot"></label><label class="check"><input id="event-mode" type="checkbox" checked>Event / tablet view</label><div class="form-actions"><button class="primary" type="submit"><i data-lucide="arrow-up-right"></i>Open Studio</button><button id="remember-device" class="secondary" type="button"><i data-lucide="bookmark-plus"></i>Remember</button></div><p id="address-error" class="error" role="alert" hidden></p></form>
+        <div id="pairing" class="pairing" hidden><canvas id="device-qr" aria-label="Device connection QR code"></canvas><div><span class="small-label">DEVICE LINK</span><a id="device-link" target="_blank" rel="noopener noreferrer"></a><button id="copy-device" class="text-button" title="Copy device link"><i data-lucide="copy"></i>Copy link</button></div></div>
+        <div id="saved-devices" class="saved-devices" aria-label="Remembered devices"></div>
+        <p class="privacy-note"><i data-lucide="shield-check"></i>Addresses stay in this browser. Robot controls stay on your UNO Q.</p>
+      </div>
+      <div class="preview"><div class="preview-caption"><span class="status-dot"></span>SKETCH + PICK & PLACE<span>Software preview</span></div><img src="./assets/studio-preview.png" width="1440" height="1057" alt="Sketchbot Studio gripper view with the interactive Braccio model, camera panes and touch controls"><div class="preview-foot"><span><i data-lucide="tablet"></i>Touchscreen</span><span><i data-lucide="gamepad-2"></i>Gamepad</span><span><i data-lucide="camera"></i>Tablet camera</span></div></div>
+    </section>
+    <section id="install" class="install-section"><div class="section-heading"><span class="step">02</span><h2>Install on UNO Q</h2><a href="./install.sh" target="_blank" rel="noopener noreferrer">Inspect installer<i data-lucide="arrow-up-right"></i></a></div><div class="install-grid"><div><label class="check"><input id="tablet-camera" type="checkbox" checked>Use tablet for face photos</label><label class="check"><input id="include-driver" type="checkbox">Install Braccio arm driver</label><label id="power-confirm-row" class="check warning" hidden><input id="servo-power-off" type="checkbox">Servo power is physically disconnected</label><label class="check"><input id="allow-motion" type="checkbox">Enable supervised hardware controls</label><p class="safety-note">Default: no firmware flash, no motion. A fitted tool, clear workspace and adult supervision are required for physical use.</p></div><div class="commands"><div class="command-heading"><span>UNO Q SSH terminal</span><button id="copy-install" class="icon-button" title="Copy install command" aria-label="Copy install command"><i data-lucide="copy"></i></button></div><pre id="install-command"></pre><p id="install-error" class="error" role="alert" hidden></p><div class="ssh-row"><code id="ssh-command">ssh arduino@&lt;uno-q-hostname&gt;</code><button id="copy-ssh" class="icon-button" title="Copy SSH command" aria-label="Copy SSH command" disabled><i data-lucide="terminal"></i></button></div></div></div><div class="install-footer"><span><i data-lucide="hard-drive"></i>No screen or keyboard on the board</span><span><i data-lucide="refresh-cw"></i>Starts after reboot</span><a href="https://github.com/eoinjordan/unoq-braccio-sketchbot/blob/main/docs/install.md" target="_blank" rel="noopener noreferrer">Wi-Fi, SSH & prerequisites<i data-lucide="arrow-up-right"></i></a></div></section>
+    <section id="downloads" class="downloads-section"><div class="section-heading"><span class="step">03</span><h2>Choose a screen</h2><a id="checksums-link" href="https://github.com/eoinjordan/unoq-braccio-sketchbot/releases" target="_blank" rel="noopener noreferrer">Release notes & checksums<i data-lucide="arrow-up-right"></i></a></div><div class="download-grid">
+      <article class="download"><span class="package-icon android"><i data-lucide="smartphone"></i></span><h3>Android tablet</h3><p>Controller screen + photo capture</p><span class="package-detail">Android 7+ / APK</span><a class="download-link" data-package="apk" href="https://github.com/eoinjordan/unoq-braccio-sketchbot/releases"><i data-lucide="download"></i><span>View releases</span></a></article>
+      <article class="download"><span class="package-icon windows"><i data-lucide="monitor"></i></span><h3>Windows</h3><p>Browser launcher installation</p><span class="package-detail">Per-user / MSI</span><a class="download-link" data-package="msi" href="https://github.com/eoinjordan/unoq-braccio-sketchbot/releases"><i data-lucide="download"></i><span>View releases</span></a></article>
+      <article class="download"><span class="package-icon browser"><i data-lucide="tablet"></i></span><h3>iPad & browser</h3><p>Home-screen web launcher</p><span class="package-detail">Safari / Chrome / Edge</span><button id="install-pwa" class="download-link"><i data-lucide="plus"></i><span>Install web app</span></button></article>
+      <article class="download"><span class="package-icon source"><i data-lucide="package"></i></span><h3>UNO Q source kit</h3><p>Code, installer & bundled interface</p><span class="package-detail">Linux / TAR.GZ</span><a class="download-link" data-package="tar.gz" href="https://github.com/eoinjordan/unoq-braccio-sketchbot/releases"><i data-lucide="download"></i><span>View releases</span></a></article>
+    </div><p id="download-status" class="download-status" role="status">Checking published packages</p><p class="download-status">APK: signed sideload, not Google Play. MSI: unsigned browser launcher. Adult supervision is required for physical robot use.</p></section>
+    <section class="network-note"><i data-lucide="network"></i><div><h2>Local first. Private when remote.</h2><p>Use the same Wi-Fi for tablets and the UNO Q. For off-site access, use a private VPN or authenticated HTTPS connection. Do not port-forward the robot control service.</p></div><a href="https://github.com/eoinjordan/unoq-braccio-sketchbot/blob/main/docs/install.md#private-remote-access" target="_blank" rel="noopener noreferrer" class="secondary">Connection guide<i data-lucide="arrow-up-right"></i></a></section>
+  </main>
+  <footer><span>Sketchbot Studio / Edge Impulse + Arduino UNO Q</span><a href="https://github.com/eoinjordan/unoq-braccio-sketchbot/blob/main/docs/safety.md" target="_blank" rel="noopener noreferrer">Safety & supervision</a><span id="offline-status"></span></footer>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script type="module" src="./assets/setup.js"></script>
+</body>
+</html>

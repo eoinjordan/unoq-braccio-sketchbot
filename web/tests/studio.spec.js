@@ -184,6 +184,30 @@ test("late pre-arm status cannot cancel a newly armed browser session", async ({
   await page.getByRole("button", { name: "Stop and disarm", exact: true }).click();
 });
 
+test("an inactive unarmed tab cannot stop another tab's controls", async ({ page, context, request }) => {
+  const observer = await context.newPage();
+  await ready(observer);
+  await page.bringToFront();
+  await ready(page);
+  await page.getByText("Real arm", { exact: true }).click();
+  await page.getByRole("button", { name: "Disarmed", exact: true }).click();
+  await page.getByLabel("Adult supervision, clear workspace and power cutoff within reach").check();
+  await page.getByRole("button", { name: "Arm controls", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Armed", exact: true })).toBeVisible();
+  const unwantedStops = [];
+  await observer.route("**/api/control/stop", async route => {
+    unwantedStops.push(route.request().postData());
+    await route.continue();
+  });
+  await observer.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await observer.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  expect(unwantedStops).toEqual([]);
+  expect((await (await request.get("/api/control/state")).json()).armed).toBe(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expect.poll(async () => (await (await request.get("/api/control/state")).json()).armed).toBe(false);
+  await observer.close();
+});
+
 test("gripper setup and pick-place preview preserve the real commanded pose", async ({ page, request }) => {
   await ready(page);
   const before = (await (await request.get("/api/control/state")).json()).arm.pose;
@@ -245,6 +269,35 @@ test("gallery shows an explicitly labelled simulation card and returns to studio
   await page.screenshot({ path: "../output/studio-gallery.png", fullPage: true });
   await page.getByRole("link", { name: "Open Sketchbot Studio", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Joint control", exact: true })).toBeVisible();
+});
+
+test("tablet photo input updates the camera without moving the robot", async ({ page, request }) => {
+  await request.post("/api/settings/camera", { data: { role: "face", spec: { format: "tablet" } } });
+  await ready(page);
+  const before = (await (await request.get("/api/control/state")).json()).arm.pose;
+  const photo = await page.locator("canvas").screenshot();
+  await page.locator("#tablet-file-face").setInputFiles({ name: "test-scene.png", mimeType: "image/png", buffer: photo });
+  await expect(page.locator("#face-status")).toContainText("Tablet frame");
+  await expect(page.locator("#face-frame")).toBeVisible();
+  expect((await (await request.get("/api/control/state")).json()).arm.pose).toEqual(before);
+  await page.getByRole("button", { name: "Clear face tablet photo", exact: true }).click();
+  await expect(page.locator("#face-frame")).toBeHidden();
+});
+
+test("event view provides large controls and refuses motion without child mode", async ({ page, request }) => {
+  await page.setViewportSize({ width: 820, height: 1180 });
+  await page.goto("/?event=1");
+  await expect(page.locator("#connection")).toHaveText("Arm connected");
+  await expect(page.getByRole("button", { name: "Open setup" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Stop and disarm" })).toBeVisible();
+  const button = await page.getByRole("button", { name: "Increase base", exact: true }).boundingBox();
+  expect(button.height).toBeGreaterThanOrEqual(48);
+  await request.post("/api/settings/controls", { data: { child_mode: false } });
+  await page.getByText("Real arm", { exact: true }).click();
+  await expect(page.locator("#calibration-status")).toHaveText("Operator: enable child mode");
+  await expect(page.getByRole("button", { name: "Disarmed", exact: true })).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: "../output/studio-event.png", fullPage: true });
 });
 
 test("mobile viewport has a visible model, usable menus and no horizontal overflow", async ({ page }) => {

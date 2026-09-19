@@ -1,5 +1,9 @@
 # Edge Impulse Sketchbot Studio (UNO Q + Braccio)
 
+**[Public setup, tablet connection & downloads](https://eoinjordan.github.io/unoq-braccio-sketchbot/)**
+| [Headless install guide](docs/install.md)
+| [APK / MSI / source packages](https://github.com/eoinjordan/unoq-braccio-sketchbot/releases)
+
 A **TinkerKit Braccio** and **Arduino UNO Q** studio for portrait sketching and
 supervised pick-and-place. Switch between a calibrated pen and gripper, preview
 the real tool geometry in Three.js, and use touch controls or a paired gamepad.
@@ -56,6 +60,13 @@ calibration. See [validation status](docs/validation.md).
   then advance it with a held control after fitting and confirming the tool.
 
 ## Sketchbot Studio
+
+For a screenless UNO Q, use the public setup page to generate a one-command
+SSH installer. A tablet on the same Wi-Fi opens the device interface directly;
+Event view provides larger controls, and the tablet can supply face photos.
+The Android APK includes camera/photo selection and paired-controller input.
+The Windows MSI installs a browser launcher; iPad and other browsers use the PWA.
+See [headless and event setup](docs/install.md). No public robot relay is exposed.
 
 The web app now includes an interactive **Three.js Braccio model**, touch joint
 controls, Bluetooth/USB gamepad input, two camera previews and a setup menu.
@@ -308,6 +319,15 @@ wire did. So the `M` protocol carries **fractional degrees** end to end:
   `write()` — `write()` takes whole degrees and would throw the fraction away
   again at the last possible moment. A servo's pulse band is ~10.3 µs per
   degree, so 0.1° is about 1 µs and comfortably resolvable.
+
+> **Installed-driver limitation:** the RoboServo 1.2.0 Zephyr backend inspected
+> on the UNO Q converts those microseconds back to a 10-bit duty value at 50 Hz.
+> That is about 19.55 microseconds, or 1.76 degrees, per PWM step. Fractional
+> numbers on the wire therefore do **not** prove fractional physical motion.
+> The two recorded small approach commands encoded exactly the same duty values
+> as the parked pose. Driver precision and the reported shaking still need
+> resolution before claiming physical drawing quality. Keep preview/testing
+> separate from supervised hardware calibration.
 
 Set `servo_decimals: 0` in [`config/workspace.yaml`](config/workspace.yaml) if
 you are driving firmware that can only take whole degrees — you will get the

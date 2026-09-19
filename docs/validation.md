@@ -6,8 +6,8 @@ The release gate is the complete Python suite, Node input/model unit tests and
 the Playwright functional suite. Browser tests start an isolated software arm
 and temporary settings; they do not connect to the real robot.
 
-Local validation on 2026-09-19: **156 Python tests**, **11 JavaScript unit tests**
-and **12 Playwright tests**. Python ran in the project's macOS virtual environment;
+Local validation on 2026-09-19: **171 Python tests**, **16 JavaScript unit tests**
+and **19 Playwright tests**. Python ran in the project's macOS virtual environment;
 the CI matrix below additionally covers Python 3.11 and 3.13 on Linux.
 
 ```bash
@@ -48,6 +48,33 @@ GitHub Actions run has already completed.
 - ESP USB serial is optional and requires pyserial and compatible firmware;
   it was not installed on the observed UNO Q. HTTP camera operation works
   without it. No camera firmware was flashed.
+
+## Installer And Tablet Release
+
+The public setup site has browser tests for local-address validation, QR pixels,
+local-only device storage, explicit firmware consent, release links and responsive
+layout. Installer tests use mocked Git/Python/systemd/App Lab commands, not a
+second real firmware installation. Tablet photo tests verify opt-in, expiry,
+content/size validation and unchanged arm targets. Event-view tests enforce the
+child-mode gate in the interface. This layout is not an authentication boundary.
+
+The Android APK is compiled and signature-verified. The Windows MSI is compiled
+and its shortcut/uninstall tables inspected; its release workflow performs a
+Windows install/uninstall check. Native camera/gamepad behavior on an actual
+event tablet remains a hands-on acceptance test even when software checks pass.
+
+The local Android emulator could not start because the installed image required
+more free disk space than the Mac had available. No user files were deleted and
+no package was installed on the connected physical device. The release workflow
+uses an isolated hosted emulator for its APK screen smoke test; its result must
+be checked independently of the local compilation/signature checks above.
+
+The installed RoboServo 1.2.0 library uses 10-bit PWM duty conversion at 50 Hz:
+19.55 microseconds per tick, approximately 1.76 degrees with the configured
+500-2500 microsecond mapping. A reproduction using the two recorded approach
+targets showed unchanged PWM values on all six channels. This explains those
+small commands producing no expected travel; it does not establish the cause of
+servo shaking. No firmware precision change or powered calibration was performed.
 
 ## Images
 

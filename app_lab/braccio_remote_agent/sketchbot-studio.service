@@ -1,0 +1,16 @@
+[Unit]
+Description=Sketchbot Studio (HTTP on :7100, motion disabled)
+After=network.target braccio-agent.service
+Conflicts=braccio-calibrate.service
+
+[Service]
+Type=simple
+WorkingDirectory=%h/unoq-braccio-sketchbot
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -m web.server --port 7100
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

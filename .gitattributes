@@ -1,1 +1,3 @@
 web/static/dist/** linguist-generated=true -whitespace
+site/assets/** linguist-generated=true -whitespace
+site/install.sh linguist-generated=true

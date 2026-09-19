@@ -2,9 +2,25 @@
 
 from __future__ import annotations
 
+import configparser
+from pathlib import Path
+
 from sketch_artist.kinematics import BraccioKinematics
 
 REQUIRED_SECTIONS = ["cameras", "workspace", "drawing", "branding", "scenes"]
+
+
+def test_studio_boot_unit_is_persistent_and_motion_disabled():
+    unit = configparser.ConfigParser(interpolation=None)
+    path = Path(__file__).resolve().parents[1] / "app_lab/braccio_remote_agent/sketchbot-studio.service"
+    assert unit.read(path)
+    assert unit["Service"]["WorkingDirectory"] == "%h/unoq-braccio-sketchbot"
+    assert unit["Service"]["ExecStart"] == "/usr/bin/python3 -m web.server --port 7100"
+    assert unit["Service"]["Restart"] == "on-failure"
+    assert unit["Install"]["WantedBy"] == "default.target"
+    assert unit["Unit"]["Conflicts"] == "braccio-calibrate.service"
+    assert "Wants" not in unit["Unit"]
+    assert "Requires" not in unit["Unit"]
 
 
 def test_runtime_overrides_preserve_defaults(tmp_path):

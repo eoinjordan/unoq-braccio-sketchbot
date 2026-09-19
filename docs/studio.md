@@ -30,6 +30,44 @@ frames are probed when previewed or when **Run checks** is selected. A configure
 but unprobed camera is not reported as available. Discovery does not move the arm,
 rewrite geometry or select an ambiguous camera silently.
 
+### Persistent Startup On The UNO Q
+
+A service started with `systemd-run --user` is transient and can disappear on
+reboot. Install the supplied unit instead, from the repository root:
+
+```bash
+install -m 644 app_lab/braccio_remote_agent/sketchbot-studio.service \
+    ~/.config/systemd/user/sketchbot-studio.service
+systemctl --user disable --now braccio-calibrate.service
+systemctl --user daemon-reload
+systemctl --user enable --now sketchbot-studio.service
+systemctl --user is-enabled sketchbot-studio.service
+systemctl --user status sketchbot-studio.service
+```
+
+The unit expects the repository at `~/unoq-braccio-sketchbot` and the device's
+system Python dependencies to be installed. It starts after the arm agent if
+that agent is already starting, but does not start, flash or reset the agent
+itself. The legacy calibration UI is excluded to avoid competing controls.
+User lingering must be enabled for startup without login; check with
+`loginctl show-user "$USER" -p Linger` (enabled on the verified UNO Q).
+
+**Hardware motion is disabled in the supplied service.** This is deliberate
+for startup and maintenance. After resolving physical setup or servo faults,
+a supervised operator can explicitly opt in with a systemd drop-in:
+
+```ini
+[Service]
+ExecStart=
+ExecStart=/usr/bin/python3 -m web.server --port 7100 --allow-motion
+```
+
+Use `systemctl --user edit sketchbot-studio.service` for the drop-in, then
+restart that service. It still starts disarmed; no movement runs on startup.
+Do not add motion opt-in while investigating shaking or with servo power off.
+The Mac camera bridge and SSH forwarding are separate processes and must be
+reconnected after a power cycle; see the camera-forwarding section below.
+
 ## Sketch And Gripper Tools
 
 The **Sketch / Gripper** selector chooses the physical tool profile; the separate
@@ -111,6 +149,7 @@ automatically reposition the arm.
 | RTSP | `rtsp://<camera>/stream` | Requires the installed OpenCV FFmpeg backend |
 | USB video | Linux `/dev/videoN`, VID:PID, or macOS device index | Automatic, MJPG, YUYV, UYVY, NV12 and H264 requests; actual support depends on the driver |
 | ESP USB serial | `/dev/ttyUSB0`, `/dev/cu.*`, or `auto`, plus baud | Requires the repository's framed JPEG serial protocol and pyserial; arbitrary ESP USB firmware is not interchangeable |
+| This tablet / phone | Explicit photo capture/upload, or secure-context live video | In-memory frames expire after five minutes; no cloud upload |
 
 The detected-device menu excludes the UNO Q's Qualcomm encoder/decoder nodes.
 On macOS, indices can change after unplugging cameras; select the named device
@@ -124,6 +163,10 @@ frames are hidden, not left on screen labelled live. Face detection is presence
 detection only; no identity recognition is performed. The camera must actually
 face the visitor, and detector availability is reported separately from whether
 a face is present.
+
+For tablet camera permissions, APK/PWA installation and the simplified event
+layout, see [the install and event guide](install.md). Uploaded stills are labelled
+Tablet frame and are not a substitute for live motion monitoring.
 
 ### Logi on the Mac, arm on the UNO Q
 
@@ -233,6 +276,9 @@ are outside the studio's session interlock. Do not operate them concurrently.
 - Delayed status replies from before an arming change cannot cancel the new
     session. Connection failures, rejected hardware commands and expired sessions
     still stop control.
+- Passive, unarmed tabs do not send Stop when hidden or unfocused. The tab that
+    owns an armed session, including one still waiting for arming, does disarm on
+    focus/visibility loss. An explicit Stop button remains global in every tab.
 
 ![Mobile gripper controls](images/studio-gripper-mobile.png)
 

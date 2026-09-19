@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import io
 import math
 import re
 import secrets
@@ -16,6 +17,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import cv2
+import numpy as np
+from PIL import Image, UnidentifiedImageError
 
 from sketch_artist import config as cfg
 from sketch_artist.arm_client import ArmClient
@@ -135,10 +138,12 @@ def validate_camera(spec):
     if not enabled:
         return cleaned
     transport = spec.get("format", "snapshot" if spec.get("url") else "usb")
-    if transport not in ("snapshot", "mjpeg", "rtsp", "usb", "serial"):
+    if transport not in ("snapshot", "mjpeg", "rtsp", "usb", "serial", "tablet"):
         raise ValueError("Unsupported camera format")
     cleaned["format"] = transport
-    if transport in ("snapshot", "mjpeg", "rtsp"):
+    if transport == "tablet":
+        cleaned["mounted_on_arm"] = False
+    elif transport in ("snapshot", "mjpeg", "rtsp"):
         url = str(spec.get("url", "")).strip()
         parts = urlsplit(url)
         schemes = ("rtsp", "rtsps") if transport == "rtsp" else ("http", "https")
@@ -183,7 +188,7 @@ def validate_camera(spec):
 
 class ControlApp:
     def __init__(self, host="127.0.0.1", port=8765, allow_motion=False,
-                 config_dir=None, arm_factory=None):
+                 config_dir=None, arm_factory=None, camera_base_url="http://127.0.0.1:7100"):
         self.config_dir = Path(config_dir or cfg.CONFIG_DIR)
         self.allow_motion = allow_motion
         self.arm_factory = arm_factory or (lambda: ArmClient(host, port, timeout=1.5))
@@ -192,6 +197,9 @@ class ControlApp:
         self.task_step_lock = threading.Lock()
         self.auth_lock = threading.Lock()
         self.camera_lock = threading.Lock()
+        self.input_lock = threading.Lock()
+        self.camera_base_url = camera_base_url
+        self.tablet_frames = {}
         self.token = None
         self.stop_generation = 0
         self.armed_until = 0.0
@@ -608,11 +616,14 @@ class ControlApp:
         if role not in ("face", "gripper"):
             raise ValueError("Unknown camera role")
         camera = validate_camera(spec)
+        if camera.get("format") == "tablet" and camera["enabled"]:
+            camera["url"] = f"{self.camera_base_url}/api/camera-input/{role}.jpg"
         self.stop()
         with self.camera_lock:
             previous = self.camera_handles.pop(role, None)
             if previous is not None:
                 previous.close()
+            self.clear_tablet_frame(role)
             specs = self.camera_specs()
             if not camera["enabled"]:
                 camera = {**specs[role], "enabled": False,
@@ -623,18 +634,72 @@ class ControlApp:
             self.reload()
         return {"ok": True, "cameras": self.camera_specs()}
 
+    def receive_tablet_frame(self, role, data):
+        if role not in ("face", "gripper"):
+            raise ValueError("Unknown camera role")
+        spec = self.camera_specs()[role]
+        if not spec.get("enabled", True) or spec.get("format") != "tablet":
+            raise ValueError("Select Tablet camera for this role in Setup before uploading")
+        if not data or len(data) > 4_000_000:
+            raise ValueError("Camera input must be at most 4 MB")
+        try:
+            with Image.open(io.BytesIO(data)) as image:
+                if image.format not in ("JPEG", "PNG") or max(image.size) > 4096:
+                    raise ValueError("Use JPEG or PNG up to 4096 pixels on either side")
+                image.verify()
+        except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+            raise ValueError("Camera input is not a valid image") from exc
+        frame = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        if frame is None:
+            raise ValueError("Camera input could not be decoded")
+        ok, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 82])
+        if not ok:
+            raise ValueError("Camera input could not be encoded")
+        with self.input_lock:
+            self.tablet_frames[role] = {"jpeg": encoded.tobytes(), "received": time.monotonic(),
+                                        "observed_at": time.time()}
+        return {"ok": True, "width": frame.shape[1], "height": frame.shape[0], "expires_seconds": 300}
+
+    def tablet_frame(self, role):
+        if role not in ("face", "gripper"):
+            raise ValueError("Unknown camera role")
+        with self.input_lock:
+            frame = self.tablet_frames.get(role)
+            if frame is None or time.monotonic() - frame["received"] > 300:
+                self.tablet_frames.pop(role, None)
+                raise RuntimeError("No recent tablet frame; capture a photo or start the tablet camera")
+            return frame["jpeg"], frame["observed_at"]
+
+    def clear_tablet_frame(self, role):
+        if role not in ("face", "gripper"):
+            raise ValueError("Unknown camera role")
+        with self.input_lock:
+            self.tablet_frames.pop(role, None)
+        return {"ok": True}
+
     def snapshot(self, role):
         if role not in ("face", "gripper"):
             raise ValueError("Unknown camera role")
         with self.camera_lock:
             try:
                 current_spec = resolve_camera_spec(self.conf["cameras"], role)
-                if role in self.camera_handles and self.camera_configs.get(role) != current_spec:
-                    self.camera_handles.pop(role).close()
-                if role not in self.camera_handles:
-                    self.camera_handles[role] = open_camera(self.conf["cameras"], role)
-                    self.camera_configs[role] = copy.deepcopy(current_spec)
-                frame = self.camera_handles[role].read()
+                observed_at = time.time()
+                if current_spec.get("format") == "tablet":
+                    data, observed_at = self.tablet_frame(role)
+                    frame = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+                    rotation = current_spec.get("rotation", 0)
+                    if rotation:
+                        frame = cv2.rotate(frame, {90: cv2.ROTATE_90_CLOCKWISE, 180: cv2.ROTATE_180,
+                                                   270: cv2.ROTATE_90_COUNTERCLOCKWISE}[rotation])
+                    if current_spec.get("mirror"):
+                        frame = cv2.flip(frame, 1)
+                else:
+                    if role in self.camera_handles and self.camera_configs.get(role) != current_spec:
+                        self.camera_handles.pop(role).close()
+                    if role not in self.camera_handles:
+                        self.camera_handles[role] = open_camera(self.conf["cameras"], role)
+                        self.camera_configs[role] = copy.deepcopy(current_spec)
+                    frame = self.camera_handles[role].read()
                 face = detect_face_rect(frame) if role == "face" else None
                 if face is not None:
                     left, top, width, height = face
@@ -646,7 +711,8 @@ class ControlApp:
                 self.camera_health[role] = {"ok": True, "width": frame.shape[1], "height": frame.shape[0],
                                             "face_detected": face is not None,
                                             "face_detection_available": bool(_find_face_cascade()),
-                                            "observed_at": time.time()}
+                                            "source": current_spec.get("format", "camera"),
+                                            "observed_at": observed_at}
                 return encoded.tobytes(), self.camera_health[role]
             except Exception as exc:
                 previous = self.camera_handles.pop(role, None)
@@ -676,6 +742,8 @@ class ControlApp:
 
     def close(self):
         self.stop()
+        with self.input_lock:
+            self.tablet_frames.clear()
         with self.camera_lock:
             for camera in self.camera_handles.values():
                 camera.close()

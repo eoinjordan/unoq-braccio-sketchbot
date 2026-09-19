@@ -462,6 +462,43 @@ def test_disabling_camera_preserves_source_and_mount(controller):
     assert not arm.moves
 
 
+def test_tablet_camera_requires_opt_in_expires_and_never_moves(controller):
+    import cv2
+    import numpy as np
+    app, arm = controller
+    _, encoded = cv2.imencode(".jpg", np.zeros((64, 96, 3), dtype=np.uint8))
+    data = encoded.tobytes()
+    with pytest.raises(ValueError, match="Select Tablet"):
+        app.receive_tablet_frame("face", data)
+    app.save_camera("face", {"format": "tablet", "mounted_on_arm": True})
+    assert not app.camera_specs()["face"]["mounted_on_arm"]
+    assert app.receive_tablet_frame("face", data)["width"] == 96
+    jpeg, health = app.snapshot("face")
+    assert jpeg.startswith(b"\xff\xd8")
+    assert health["source"] == "tablet"
+    app.tablet_frames["face"]["received"] -= 301
+    with pytest.raises(RuntimeError, match="recent tablet"):
+        app.tablet_frame("face")
+    assert not app.tablet_frames
+    assert not arm.moves
+
+
+def test_tablet_camera_rejects_invalid_content_and_clears_frames(controller):
+    import cv2
+    import numpy as np
+    app, arm = controller
+    app.save_camera("gripper", {"format": "tablet"})
+    for data in (b"not an image", b"", b"x" * 4_000_001):
+        with pytest.raises(ValueError):
+            app.receive_tablet_frame("gripper", data)
+    _, encoded = cv2.imencode(".png", np.zeros((32, 32, 3), dtype=np.uint8))
+    app.receive_tablet_frame("gripper", encoded.tobytes())
+    app.clear_tablet_frame("gripper")
+    with pytest.raises(RuntimeError):
+        app.tablet_frame("gripper")
+    assert not arm.moves
+
+
 def test_controller_preferences_validate_button_conflicts(controller):
     app, arm = controller
     with pytest.raises(ValueError, match="different"):
