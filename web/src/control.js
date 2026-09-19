@@ -6,6 +6,7 @@ import { createIcons, Bot, Settings2, Box, Radio, ShieldCheck, Gamepad2, LockKey
 import { createRobotView } from "./robot.js";
 import { boundedPose, GamepadGate, jointNames } from "./input.js";
 import { installTabletCameraControls } from "./tablet.js";
+import { withRequestTimeout } from "./http.js";
 
 const icons = { Bot, Settings2, Box, Radio, ShieldCheck, Gamepad2, LockKeyhole, Square,
   RotateCcw, Scan, ZoomIn, ZoomOut, UserRound, SlidersHorizontal, Camera, Pencil,
@@ -49,19 +50,21 @@ function notice(message) {
   noticeTimer = setTimeout(() => { element("notice").hidden = true; }, 6000);
 }
 async function api(path, body) {
-  const response = await fetch(path, {
-    method: body === undefined ? "GET" : "POST",
-    headers: body === undefined ? {} : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    cache: "no-store", signal: AbortSignal.timeout(path.includes("diagnostics") ? 35000 : 8000),
+  return withRequestTimeout(path.includes("diagnostics") ? 35000 : 8000, async signal => {
+    const response = await fetch(path, {
+      method: body === undefined ? "GET" : "POST",
+      headers: body === undefined ? {} : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store", signal,
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      const error = new Error(data.error || `Request failed (${response.status})`);
+      error.retryable = response.status === 409 && data.retryable === true;
+      throw error;
+    }
+    return data;
   });
-  const data = await response.json();
-  if (!response.ok) {
-    const error = new Error(data.error || `Request failed (${response.status})`);
-    error.retryable = response.status === 409 && data.retryable === true;
-    throw error;
-  }
-  return data;
 }
 function stopHolding() {
   holding = null;
@@ -504,9 +507,11 @@ async function pollCamera(role) {
   try {
     if (document.hidden || !state) return;
     if (state.cameras[role]?.enabled === false) throw new Error("Disabled");
-    const response = await fetch(`/api/camera/${role}.jpg`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw new Error((await response.json()).error || "Unavailable");
-    const blob = await response.blob();
+    const { response, blob } = await withRequestTimeout(15000, async signal => {
+      const response = await fetch(`/api/camera/${role}.jpg`, { cache: "no-store", signal });
+      if (!response.ok) throw new Error((await response.json()).error || "Unavailable");
+      return { response, blob: await response.blob() };
+    });
     const nextUrl = URL.createObjectURL(blob);
     const image = element(`${role}-frame`);
     image.src = nextUrl; await image.decode();

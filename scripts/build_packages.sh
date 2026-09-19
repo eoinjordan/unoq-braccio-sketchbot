@@ -2,6 +2,7 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 VERSION=$(node -p "require('$ROOT/web/package.json').version")
+VERSION_CODE=$(node -p "const [major,minor,patch]=require('$ROOT/web/package.json').version.split('.').map(Number); major*10000+minor*100+patch")
 SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
 BUILD_TOOLS="${ANDROID_BUILD_TOOLS:-35.0.0}"
 PLATFORM="${ANDROID_PLATFORM:-android-35}"
@@ -17,7 +18,7 @@ cp "$ROOT/site/assets/icon-192.png" "$WORK/res/drawable/icon.png"
 "$TOOLS/aapt2" compile --dir "$WORK/res" -o "$WORK/resources.zip"
 "$TOOLS/aapt2" link -o "$WORK/resources.apk" --manifest "$ROOT/packaging/android/AndroidManifest.xml" \
   -I "$ANDROID_JAR" --java "$WORK/generated" --min-sdk-version 24 --target-sdk-version 35 \
-  --version-code 3 --version-name "$VERSION" "$WORK/resources.zip"
+  --version-code "$VERSION_CODE" --version-name "$VERSION" "$WORK/resources.zip"
 find "$ROOT/packaging/android/src" "$WORK/generated" -name '*.java' -print0 | \
   xargs -0 javac -source 8 -target 8 -classpath "$ANDROID_JAR" -d "$WORK/classes"
 find "$WORK/classes" -name '*.class' -print0 | xargs -0 "$TOOLS/d8" --release --min-api 24 \

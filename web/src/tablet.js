@@ -1,3 +1,5 @@
+import { withRequestTimeout } from "./http.js";
+
 export function installTabletCameraControls({ getState, notify, refreshIcons }) {
   let stream = null;
   let activeRole = null;
@@ -25,11 +27,10 @@ export function installTabletCameraControls({ getState, notify, refreshIcons }) 
     canvas.getContext("2d").drawImage(source, 0, 0, canvas.width, canvas.height);
     const jpeg = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.82));
     if (!jpeg) throw new Error("Camera frame could not be encoded");
-    const operation = fetch(`/api/camera-input/${role}`, {
-      method: "POST", headers: { "Content-Type": "image/jpeg" }, body: jpeg,
-      signal: AbortSignal.timeout(8000),
-    });
-    pendingUpload = operation.then(async response => {
+    pendingUpload = withRequestTimeout(8000, async signal => {
+      const response = await fetch(`/api/camera-input/${role}`, {
+        method: "POST", headers: { "Content-Type": "image/jpeg" }, body: jpeg, signal,
+      });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Camera upload failed");
       return result;

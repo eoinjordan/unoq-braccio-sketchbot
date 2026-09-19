@@ -109,9 +109,9 @@ Check the release's `SHA256SUMS` before installing.
 
 | Package | What it installs |
 | --- | --- |
-| `Sketchbot-Tablet-0.3.0.apk` | Android 7+ controller WebView, device address entry, system camera/photo picker and paired-gamepad forwarding |
-| `Sketchbot-Launcher-0.3.0.msi` | Windows per-user Start Menu/browser launcher; not a motor driver or a native camera server |
-| `Sketchbot-Source-0.3.0.tar.gz` | Source, installer and prebuilt web assets; Python dependencies still download during setup |
+| `Sketchbot-Tablet-0.3.1.apk` | Android 7+ controller WebView, device address entry, system camera/photo picker and paired-gamepad forwarding |
+| `Sketchbot-Launcher-0.3.1.msi` | Windows per-user Start Menu/browser launcher; not a motor driver or a native camera server |
+| `Sketchbot-Source-0.3.1.tar.gz` | Source, installer and prebuilt web assets; Python dependencies still download during setup |
 | PWA | Public setup/device launcher on Android, iPad, Windows, macOS or Linux; no native installer needed |
 
 The Android APK is release-key signed, but is not distributed through Google Play.

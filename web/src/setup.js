@@ -4,6 +4,7 @@ import { createIcons, Bot, Github, ArrowUpRight, BookmarkPlus, ShieldCheck, Copy
   Camera, Terminal, HardDrive, RefreshCw, Smartphone, Monitor, Package, Download, Plus, Network, Trash2 } from "lucide";
 import QRCode from "qrcode";
 import { controllerUrl, deviceAddress, installCommand, repositoryUrl, savedDevices } from "./setup-model.js";
+import { withRequestTimeout } from "./http.js";
 
 const icons = { Bot, Github, ArrowUpRight, BookmarkPlus, ShieldCheck, Copy, Tablet, Gamepad2,
   Camera, Terminal, HardDrive, RefreshCw, Smartphone, Monitor, Package, Download, Plus, Network, Trash2 };
@@ -92,9 +93,11 @@ byId("copy-install").onclick = () => copy(byId("install-command").textContent);
 
 async function releases() {
   try {
-    const response = await fetch("https://api.github.com/repos/eoinjordan/unoq-braccio-sketchbot/releases/latest", { signal: AbortSignal.timeout(8000) });
-    if (!response.ok) throw new Error("Release list unavailable");
-    const release = await response.json();
+    const release = await withRequestTimeout(8000, async signal => {
+      const response = await fetch("https://api.github.com/repos/eoinjordan/unoq-braccio-sketchbot/releases/latest", { signal });
+      if (!response.ok) throw new Error("Release list unavailable");
+      return response.json();
+    });
     byId("release-version").textContent = release.tag_name;
     for (const link of document.querySelectorAll("[data-package]")) {
       const asset = release.assets.find(item => item.name.endsWith(`.${link.dataset.package}`));

@@ -40,6 +40,14 @@ test("desktop renders the real 3D scene, local assets and disarmed defaults", as
   expect(errors).toEqual([]);
 });
 
+test("Android WebView without AbortSignal.timeout can connect to Studio", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(AbortSignal, "timeout", { configurable: true, value: undefined });
+  });
+  await ready(page);
+  await expect(page.getByRole("button", { name: "Hold to move" })).toBeDisabled();
+});
+
 test("sliders animate only the preview and do not move the arm", async ({ page, request }) => {
   await ready(page);
   const before = (await (await request.get("/api/control/state")).json()).arm.pose;

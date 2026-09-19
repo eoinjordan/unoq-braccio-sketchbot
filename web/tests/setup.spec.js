@@ -5,9 +5,9 @@ const repository = "https://github.com/eoinjordan/unoq-braccio-sketchbot";
 
 test.beforeEach(async ({ page }) => {
   await page.route("https://api.github.com/repos/eoinjordan/unoq-braccio-sketchbot/releases/latest", route => route.fulfill({
-    contentType: "application/json", body: JSON.stringify({ tag_name: "v0.3.0", html_url: `${repository}/releases/tag/v0.3.0`,
-      assets: ["Sketchbot-Tablet-0.3.0.apk", "Sketchbot-Launcher-0.3.0.msi", "Sketchbot-Source-0.3.0.tar.gz"].map(name => ({
-        name, size: 100000, browser_download_url: `${repository}/releases/download/v0.3.0/${name}`,
+    contentType: "application/json", body: JSON.stringify({ tag_name: "v0.3.1", html_url: `${repository}/releases/tag/v0.3.1`,
+      assets: ["Sketchbot-Tablet-0.3.1.apk", "Sketchbot-Launcher-0.3.1.msi", "Sketchbot-Source-0.3.1.tar.gz"].map(name => ({
+        name, size: 100000, browser_download_url: `${repository}/releases/download/v0.3.1/${name}`,
       })) }),
   }));
 });
@@ -47,7 +47,7 @@ test("public page renders verified release links and responsive desktop/mobile a
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(setup);
-  await expect(page.locator('[data-package="apk"]')).toHaveAttribute("href", /releases\/download\/v0.3.0\/.*\.apk/);
+  await expect(page.locator('[data-package="apk"]')).toHaveAttribute("href", /releases\/download\/v0.3.1\/.*\.apk/);
   await expect.poll(() => page.locator(".preview img").evaluate(image => image.naturalWidth)).toBeGreaterThan(100);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.evaluate(() => Promise.all(document.getAnimations().map(animation => animation.finished)));

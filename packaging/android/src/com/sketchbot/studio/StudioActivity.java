@@ -13,6 +13,8 @@ import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -72,6 +74,12 @@ public final class StudioActivity extends Activity {
         address.setSingleLine(true);
         address.setHint("UNO Q address");
         address.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
+        address.setImeOptions(EditorInfo.IME_ACTION_GO);
+        address.setOnEditorActionListener((view, action, event) -> {
+            if (action != EditorInfo.IME_ACTION_GO) return false;
+            connect(address.getText().toString());
+            return true;
+        });
         toolbar.addView(address, new LinearLayout.LayoutParams(0, 56 * (int)Math.max(1, getResources().getDisplayMetrics().density), 1));
         Button connect = new Button(this); connect.setText("Connect");
         connect.setOnClickListener(view -> connect(address.getText().toString()));
@@ -181,6 +189,8 @@ public final class StudioActivity extends Activity {
         try {
             String origin = normalAddress(value);
             releaseControls(); deviceOrigin = origin; address.setText(origin);
+            ((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(address.getWindowToken(), 0);
+            address.clearFocus(); web.requestFocus();
             getPreferences(MODE_PRIVATE).edit().putString("device", origin).apply();
             web.loadUrl(origin + "/?event=1");
         } catch (Exception error) { toast("Use a local UNO Q address or your private HTTPS address"); }

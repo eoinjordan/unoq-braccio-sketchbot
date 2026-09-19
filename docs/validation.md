@@ -6,8 +6,8 @@ The release gate is the complete Python suite, Node input/model unit tests and
 the Playwright functional suite. Browser tests start an isolated software arm
 and temporary settings; they do not connect to the real robot.
 
-Local validation on 2026-09-19: **171 Python tests**, **16 JavaScript unit tests**
-and **19 Playwright tests**. Python ran in the project's macOS virtual environment;
+Local validation on 2026-09-19: **171 Python tests**, **18 JavaScript unit tests**
+and **20 Playwright tests**. Python ran in the project's macOS virtual environment;
 the CI matrix below additionally covers Python 3.11 and 3.13 on Linux.
 
 ```bash
@@ -68,6 +68,12 @@ more free disk space than the Mac had available. No user files were deleted and
 no package was installed on the connected physical device. The release workflow
 uses an isolated hosted emulator for its APK screen smoke test; its result must
 be checked independently of the local compilation/signature checks above.
+
+The 0.3.0 hosted Windows install/uninstall and Linux software matrix passed.
+Its Android APK installed and launched, but the screen connection check failed.
+A browser reproduction confirmed the same failure when `AbortSignal.timeout`
+is unavailable. Version 0.3.1 uses portable `AbortController` deadlines and adds
+a regression for that WebView case; its native runtime check is a separate run.
 
 The installed RoboServo 1.2.0 library uses 10-bit PWM duty conversion at 50 Hz:
 19.55 microseconds per tick, approximately 1.76 degrees with the configured

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { deviceAddress, controllerUrl, installCommand, savedDevices } from "../src/setup-model.js";
+import { withRequestTimeout } from "../src/http.js";
 
 test("local device names and private IP addresses receive the Studio port", () => {
   assert.equal(deviceAddress("unoq.local"), "http://unoq.local:7100");
@@ -35,4 +36,19 @@ test("device storage discards malformed or unsafe records", () => {
   assert.deepEqual(savedDevices("{}"), []);
   assert.deepEqual(savedDevices(JSON.stringify([{ name: "Robot", address: "unoq.local" }, { address: "http://public.example" }])),
     [{ name: "Robot", address: "http://unoq.local:7100" }]);
+});
+
+test("request timeout uses portable AbortController cancellation", async () => {
+  const result = await withRequestTimeout(10, signal => new Promise(resolve => {
+    signal.addEventListener("abort", () => resolve("aborted"), { once: true });
+  }));
+  assert.equal(result, "aborted");
+});
+
+test("successful and rejected requests clean up their deadline", async () => {
+  assert.equal(await withRequestTimeout(10000, async signal => {
+    assert.equal(signal.aborted, false);
+    return 42;
+  }), 42);
+  await assert.rejects(withRequestTimeout(10000, async () => { throw new Error("network failed"); }), /network failed/);
 });

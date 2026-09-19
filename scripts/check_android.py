@@ -75,13 +75,14 @@ def main():
                 connected = True
                 break
         (output / "screen.png").write_bytes(adb("exec-out", "screencap", "-p", binary=True))
-        if not connected:
-            raise RuntimeError("APK did not display the simulator's connected Studio screen")
         process = adb("shell", "pidof", "com.sketchbot.studio").strip()
-        logs = adb("logcat", "-d", f"--pid={process}", "-s", "AndroidRuntime:E")
+        logs = adb("logcat", "-d", f"--pid={process}", "-s", "AndroidRuntime:E", "chromium:I")
         (output / "runtime.log").write_text(logs)
+        (output / "webview.txt").write_text(adb("shell", "dumpsys", "webviewupdate"))
         if "FATAL EXCEPTION" in logs:
             raise RuntimeError("Android app crashed")
+        if not connected:
+            raise RuntimeError("APK did not display the simulator's connected Studio screen; see screenshot, hierarchy and WebView logs")
         with urllib.request.urlopen("http://127.0.0.1:7119/api/control/state", timeout=5) as response:
             after = json.load(response)
         if after["armed"] or after["arm"]["pose"] != before["arm"]["pose"]:
