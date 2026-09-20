@@ -130,6 +130,36 @@ stand **27 mm below the bottom edge of the printed collar**. That is the length
 even 10 mm too long cannot be rescued in software — it presses at every height
 the arm can reach. Measure it with a ruler; don't eyeball it.
 
+## Pulse Precision
+
+RoboServo 1.2.0 on the UNO Q converts `writeMicroseconds()` to a 10-bit duty
+value before passing it to its Zephyr backend. At 50 Hz that discards roughly
+19.55 microseconds per duty step, about 1.76 degrees with the 500-2500 us pulse
+mapping. The two small approach commands observed on this rig encoded the same
+PWM values as the parked pose, so their acknowledgement did not mean movement.
+
+The updated driver keeps RoboServo's channel allocation but writes the pulse
+through `RoboZephyrBackend::writeDuty` with a 16-bit encoding. `BraccioPulse.hpp`
+preserves integer microseconds before the backend's remaining 4 us timer tick
+(approximately 0.36 degrees). This does not provide servo-position feedback or
+prove the cause of mechanical shaking.
+
+Validate the actual C++ pulse conversion with:
+
+```bash
+.venv/bin/python -m pytest tests/test_servo_driver.py -q
+```
+
+The updated driver passed that host test and a build-only compilation for the
+installed `arduino:zephyr:unoq:wait_linux_boot=app` core, then was uploaded through
+App Lab on the development UNO Q on 2026-09-19. The agent restarted at its rest
+target with zero received move commands. Physical contact and a completed sketch
+have not yet been verified. Updating source alone does not update another board's
+MCU. Disconnect servo power before flashing; then recheck tool position, height
+and contact under supervision. The corrected pulse values may shift physical
+positions relative to the previous rounded driver. Do not reuse a contact-height
+assumption blindly or increase downward force to compensate for a blank page.
+
 ## Servo pin map
 
 Braccio shield defaults: base `11`, shoulder `10`, elbow `9`, wrist_vertical `6`,

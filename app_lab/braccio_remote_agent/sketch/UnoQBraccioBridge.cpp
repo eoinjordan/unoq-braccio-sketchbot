@@ -6,16 +6,11 @@
 // tick). Exposes the same `move_braccio(...)` entry point the remote agent's
 // Python side calls over the App Lab Bridge.
 //
-// Angles are FLOATS and are written as microseconds rather than whole degrees.
-// The paper sits ~175 mm from the base axis, so one degree of base rotation
-// moves the pen ~3 mm and a 40 mm sheet spans only 13 degrees: rounded to whole
-// degrees a portrait collapses into about a dozen columns. `write()` takes
-// integer degrees, so `writeMicroseconds()` is what actually carries the
-// fraction (~10.3 us per degree, so 0.1 deg is ~1 us).
-
 #include "UnoQBraccioBridge.h"
+#include "BraccioPulse.hpp"
 
 #include <RoboServo.h>
+#include <RoboZephyrBackend.h>
 
 namespace {
 const int JOINTS = 6;
@@ -29,8 +24,8 @@ const int SOFT_START_PIN = 12;
 // this change. Any other band silently shifts every joint and invalidates the
 // servo_calibration in config/workspace.yaml. The servos are attached with
 // these limits explicitly so a library default change cannot move the arm.
-const int MIN_PULSE_US = 500;
-const int MAX_PULSE_US = 2500;
+const int MIN_PULSE_US = BraccioPulse::MIN_US;
+const int MAX_PULSE_US = BraccioPulse::MAX_US;
 // Largest change applied per 20 ms tick, in degrees. Same slew rate as the
 // original one-degree-per-step loop.
 const float MAX_STEP_DEG = 1.0f;
@@ -43,13 +38,6 @@ const float ARRIVED_DEG = 0.05f;
 // up first and then energising one joint at a time spreads the peak draw.
 const int SOFT_START_MS = 600;   // let the servo rail settle before any torque
 const int STAGGER_MS = 180;      // gap between energising each joint
-
-// Same 0-180 -> pulse mapping RoboServo::write() applies, but keeping the
-// fraction: ~11.1 us per degree, so 0.1 deg is about 1 us.
-int pulseFor(float degrees) {
-  const float span = (float)(MAX_PULSE_US - MIN_PULSE_US);
-  return (int)((float)MIN_PULSE_US + (degrees / 180.0f) * span + 0.5f);
-}
 
 RoboServo base;
 RoboServo shoulder;
@@ -70,15 +58,21 @@ float clampJoint(int index, float value) {
   return value;
 }
 
+void writeServoPulse(RoboServo &servo, float angle) {
+  if (!servo.attached()) return;
+  const int pulseUs = BraccioPulse::forAngle(angle);
+  RoboZephyrBackend::writeDuty(servo.getChannel(),
+    BraccioPulse::dutyForMicroseconds(pulseUs),
+    BraccioPulse::FREQUENCY_HZ, BraccioPulse::RESOLUTION_BITS);
+}
+
 void writeCurrent() {
-  // Microseconds, not write(): write() quantises to whole degrees and would
-  // discard exactly the precision this change exists to carry.
-  base.writeMicroseconds(pulseFor(current[0]));
-  shoulder.writeMicroseconds(pulseFor(current[1]));
-  elbow.writeMicroseconds(pulseFor(current[2]));
-  wrist_ver.writeMicroseconds(pulseFor(current[3]));
-  wrist_rot.writeMicroseconds(pulseFor(current[4]));
-  gripper.writeMicroseconds(pulseFor(current[5]));
+  writeServoPulse(base, current[0]);
+  writeServoPulse(shoulder, current[1]);
+  writeServoPulse(elbow, current[2]);
+  writeServoPulse(wrist_ver, current[3]);
+  writeServoPulse(wrist_rot, current[4]);
+  writeServoPulse(gripper, current[5]);
 }
 }  // namespace
 
@@ -97,7 +91,7 @@ void setupBraccioBridge() {
                                &wrist_ver, &wrist_rot, &gripper};
   for (int i = 0; i < JOINTS; i++) {
     servos[i]->attach(SERVO_PINS[i], MIN_PULSE_US, MAX_PULSE_US);
-    servos[i]->writeMicroseconds(pulseFor(current[i]));
+    writeServoPulse(*servos[i], current[i]);
     delay(STAGGER_MS);
   }
 }

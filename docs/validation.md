@@ -86,7 +86,17 @@ The installed RoboServo 1.2.0 library uses 10-bit PWM duty conversion at 50 Hz:
 500-2500 microsecond mapping. A reproduction using the two recorded approach
 targets showed unchanged PWM values on all six channels. This explains those
 small commands producing no expected travel; it does not establish the cause of
-servo shaking. No firmware precision change or powered calibration was performed.
+servo shaking.
+
+A subsequent driver fix bypasses the 10-bit conversion using the existing
+Zephyr backend's 16-bit duty input, while retaining the 500-2500 us angle mapping
+and the backend's 4 us timer resolution. A compiled C++ regression verifies every
+integer pulse in that range and confirms 0.75-degree steps change output. Both
+a build-only UNO Q compilation and an App Lab compile/upload succeeded on
+2026-09-19. The updated agent reports its rest target with zero received move
+commands after startup. The prior driver was backed up before upload. Physical
+pen contact, a completed drawing and resolution of shaking remain unverified;
+Studio was left disarmed and motion-disabled pending a present operator.
 
 ## Images
 
