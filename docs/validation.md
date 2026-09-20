@@ -98,6 +98,29 @@ commands after startup. The prior driver was backed up before upload. Physical
 pen contact, a completed drawing and resolution of shaking remain unverified;
 Studio was left disarmed and motion-disabled pending a present operator.
 
+## Small Commands And Deadband
+
+On 2026-09-20, with the precision driver installed, the operator heard motor
+effort but repeated 0.5-degree commands produced little visible travel and no
+verified pencil line. A single 2-degree shoulder target, from 46.9 to 48.9
+degrees with the other joints unchanged, produced operator-confirmed movement.
+The close-up image also showed the tip moving upward by about 10 pixels. The
+arm was disarmed after the test. A pencil stroke and portrait remain unverified.
+
+Treat mechanical deadband, backlash and load as early troubleshooting suspects
+when small commands are acknowledged but the arm barely moves. This observation
+does not measure the minimum useful step, prove the cause, or establish a
+2-degree threshold for other joints, directions or loads. Small absolute targets
+can also accumulate; lack of motion is not explained by step size alone.
+
+- Check the active driver and camera view before repeating firmware or SSH setup.
+- Compare commanded targets with visible movement, not just `OK` or cached pose.
+- With a present operator and a clear sweep, test a bounded move away from the
+  paper within the existing manual limits; stop and inspect after each test.
+- Do not compensate by increasing downward pressure, adding pen-down overshoot,
+  or raising global motion limits. Stop commands disarm software motion but do
+  not remove servo holding torque; sustained strain requires a servo-power cutoff.
+
 ## Images
 
 The current `studio-*.png` documentation images are produced by Playwright from
