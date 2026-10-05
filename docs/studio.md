@@ -110,9 +110,14 @@ is removed and the tool dimensions are checked.
     changing the real commanded pose.
 4. For physical work, select Real arm, plan again, check the workspace, confirm
     the fitted tool and arm. Hold **Hold to run** to advance through approach,
-    open, lower, grip, lift, transfer, lower, release and retract.
-5. Release to pause. Stop cancels and disarms without opening the jaws or
+    open, lower, grip, lift, transfer, lower, release and retract. Or click
+    **Play fully** once to run the entire prepared task without holding.
+5. With **Hold to run**, release to pause. Stop cancels and disarms without opening the jaws or
     attempting an automatic return. An accepted bounded step may still finish.
+
+**Play fully** disarms on completion. Keep the page visible and focused; Stop,
+focus loss, a connection fault or manual jog input cancels automatic play. The
+event page does not offer automatic play. An accepted step may still finish.
 
 No force sensor, object detection, grasp success feedback or automatic recovery
 is implied. A completed command sequence does not prove that an object was picked

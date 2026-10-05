@@ -325,3 +325,58 @@ test("mobile viewport has a visible model, usable menus and no horizontal overfl
   expect(modal.x + modal.width).toBeLessThanOrEqual(390);
   await page.screenshot({ path: "../output/studio-mobile-settings.png", fullPage: true });
 });
+for (const cancel of [false, "stop", "blur", "fault"]) test(`Play fully ${cancel ? `cancels on ${cancel} without another step` : "finishes a task from one click"}`, async ({ page, request }) => {
+  const state = await (await request.get("/api/control/state")).json();
+  state.tools.active = "gripper";
+  state.controls.child_mode = false;
+  const plan = { id: "automatic-test", kind: "pick_place", tool: "gripper", index: 0,
+    count: 3, label: "Approach", complete: false, start: state.arm.pose,
+    waypoints: Array.from({ length: 3 }, () => ({ label: "Test", angles: state.arm.pose })) };
+  let steps = 0;
+  let stopped = false;
+  let releaseStep;
+  await page.route("**/api/control/state", route => route.fulfill({ json: { ...state, task: plan.complete ? null : plan } }));
+  await page.route("**/api/control/task/prepare", route => route.fulfill({ json: plan }));
+  await page.route("**/api/control/arm", route => { state.armed = true; return route.fulfill({ json: { token: "test-token" } }); });
+  await page.route("**/api/control/stop", route => { stopped = true; return route.fulfill({ json: {} }); });
+  await page.route("**/api/control/task/step", async route => {
+    steps++;
+    if (cancel === "fault") { await route.fulfill({ status: 503, json: { error: "Agent disconnected" } }); return; }
+    if (cancel) await new Promise(resolve => { releaseStep = resolve; });
+    plan.index = steps; plan.complete = steps === 3;
+    if (plan.complete) state.armed = false;
+    await route.fulfill({ json: { pose: state.arm.pose, task: plan, complete: plan.complete } });
+  });
+  // Simulate session ownership only after the UI has been armed.
+  state.armed = false;
+  // These tests exercise controls without costly software 3D rendering.
+  await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
+  await page.goto("/");
+  await expect(page.locator("#connection")).toHaveText("Arm connected");
+  await expect(page.locator("#prepare-task")).toHaveText("Plan pick & place");
+  await page.getByText("Real arm", { exact: true }).click();
+  await page.locator("#prepare-task").click();
+  await expect(page.locator("#run-full-task")).toBeDisabled();
+  await page.locator("#arm-button").click();
+  await page.getByLabel("Adult supervision, clear workspace and power cutoff within reach").check();
+  await page.locator("#tool-confirmed").check();
+  await page.locator("#confirm-arm").click();
+  await expect(page.locator("#run-full-task")).toBeEnabled();
+  stopped = false;
+  await page.locator("#run-full-task").click();
+  if (cancel) {
+    await expect.poll(() => steps).toBe(1);
+    if (cancel === "stop") await page.locator("#stop").click();
+    if (cancel === "blur") await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+    await expect.poll(() => stopped).toBe(true);
+    if (releaseStep) releaseStep();
+    await page.waitForTimeout(650);
+    expect(steps).toBe(1);
+    await expect(page.locator("#run-full-task")).toBeDisabled();
+    await expect(page.locator("#task-status")).toHaveText("No task planned");
+  } else {
+    await expect(page.locator("#task-status")).toHaveText("Task complete");
+    expect(steps).toBe(3);
+    await expect(page.locator("#arm-button")).toHaveText("Disarmed");
+  }
+});

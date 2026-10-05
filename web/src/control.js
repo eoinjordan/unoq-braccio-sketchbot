@@ -25,6 +25,7 @@ let controlGeneration = 0;
 let selectedJoint = 0;
 let targetEdited = false;
 let holding = null;
+let playingFully = false;
 let motionPending = false;
 let noticeTimer;
 let deviceReport = [];
@@ -67,6 +68,7 @@ async function api(path, body) {
   });
 }
 function stopHolding() {
+  playingFully = false;
   holding = null;
   queryAll(".holding").forEach(button => button.classList.remove("holding"));
 }
@@ -104,6 +106,9 @@ function updateTask() {
   element("play-task").disabled = !taskPlan || mode !== "preview";
   element("run-task").disabled = !token || mode !== "real" || !taskPlan || taskPlan.complete ||
     (!gripper && (state?.controls.child_mode || !element("contact-confirmed").checked));
+  element("run-full-task").disabled = element("run-task").disabled || playingFully || eventView;
+  element("run-full-task").textContent = playingFully ? "Playing…" : "Play fully";
+  element("run-full-task").setAttribute("aria-pressed", String(playingFully));
   element("task-status").textContent = taskPlan ?
     (taskPlan.complete ? "Task complete" : `${taskPlan.index + 1} / ${taskPlan.count} - ${taskPlan.label}`) : "No task planned";
   if (mode === "preview" && taskPlan?.previewLabel) element("task-status").textContent = taskPlan.previewLabel;
@@ -197,6 +202,10 @@ try {
 renderJoints();
 bindHold(element("apply-pose"), () => ({ target: true }));
 bindHold(element("run-task"), () => ({ task: true }));
+element("run-full-task").onclick = () => {
+  if (element("run-full-task").disabled || motionPending) return;
+  stopHolding(); playingFully = true; updateTask(); advanceTask();
+};
 bindHold(element("open-grip"), () => ({ grip: "open" }));
 bindHold(element("close-grip"), () => ({ grip: "close" }));
 element("view-reset").onclick = () => robot?.resetView();
@@ -226,7 +235,7 @@ queryAll("input[name=tool]").forEach(input => input.addEventListener("change", a
     await refreshState(); fillForms();
   } catch (error) { notice(error.message); await refreshState(); }
 }));
-element("contact-confirmed").onchange = updateTask;
+element("contact-confirmed").onchange = () => { if (playingFully) disarm(); updateTask(); };
 element("prepare-task").onclick = async () => {
   if (!state) return;
   element("prepare-task").disabled = true;
@@ -307,8 +316,8 @@ queryAll(".close-dialog").forEach(button => button.onclick = () => {
 });
 queryAll("dialog").forEach(dialog => dialog.addEventListener("close", () => { stopHolding(); gamepadGate.reset(); }));
 document.addEventListener("keydown", event => { if (event.key === "Escape") disarm(); });
-document.addEventListener("keyup", event => { if ([" ", "Enter"].includes(event.key)) stopHolding(); });
-window.addEventListener("pointerup", stopHolding);
+document.addEventListener("keyup", event => { if (!playingFully && [" ", "Enter"].includes(event.key)) stopHolding(); });
+window.addEventListener("pointerup", () => { if (!playingFully) stopHolding(); });
 window.addEventListener("blur", releaseOwnedSession);
 document.addEventListener("visibilitychange", () => { if (document.hidden) releaseOwnedSession(); });
 window.addEventListener("pagehide", () => {
@@ -450,7 +459,7 @@ async function refreshState() {
   if (generation !== controlGeneration) return;
   state = incoming;
   tabletCameras.update();
-  if (taskPlan && incoming.task?.id === taskPlan.id) Object.assign(taskPlan, incoming.task);
+  if (taskPlan && !taskPlan.complete && incoming.task?.id === taskPlan.id) Object.assign(taskPlan, incoming.task);
   else if (taskPlan && !taskPlan.complete && !incoming.task && !motionPending) { taskPlan = null; clearTimeout(previewTimer); }
   if (token && !incoming.armed) { token = null; stopHolding(); gamepadGate.reset(); }
   const connection = element("connection");
@@ -555,7 +564,7 @@ function gamepadTick() {
   if (!state || document.hidden || element("settings").open || element("arm-confirm").open) return;
   const input = gamepadGate.read(pad, state.controls);
   if (input.stop) { if (token || holding) disarm(true); return; }
-  if (!input.enabled || holding || (input.deltas.every(delta => delta === 0) && !input.grip)) return;
+  if (!input.enabled || holding || playingFully || (input.deltas.every(delta => delta === 0) && !input.grip)) return;
   const maximum = Math.min(state.controls.step_deg, state.controls.child_mode ? 0.75 : 2);
   const deltas = [...input.deltas.map(value => value * maximum), 0, 0];
   if (state.tools.active === "gripper" && input.grip) {
@@ -569,6 +578,15 @@ function gamepadTick() {
 }
 window.addEventListener("gamepaddisconnected", releaseOwnedSession);
 window.addEventListener("gamepadconnected", () => { gamepadGate.reset(); });
-setInterval(() => { applyHeld(); gamepadTick(); }, 200);
+setInterval(() => {
+  if (playingFully) {
+    if (!token || !taskPlan || taskPlan.complete || mode !== "real" || document.hidden ||
+        element("settings").open || element("arm-confirm").open ||
+        (state?.tools.active === "sketch" && !element("contact-confirmed").checked)) {
+      disarm();
+    } else advanceTask();
+  } else applyHeld();
+  gamepadTick();
+}, 200);
 createIcons({ icons });
 pollState(); runChecks(); pollCamera("face"); pollCamera("gripper");
