@@ -1,4 +1,4 @@
-const CACHE = "sketchbot-setup-v1";
+const CACHE = "sketchbot-setup-v2";
 const FILES = ["./", "./index.html", "./style.css", "./assets/setup.js", "./assets/setup.css",
   "./manifest.webmanifest", "./assets/icon-192.png", "./assets/icon-512.png", "./assets/studio-preview.png"];
 self.addEventListener("install", event => {

@@ -582,6 +582,17 @@ docs/              Architecture, calibration and safety notes
 examples/          A sample face image for dry runs
 ```
 
+## Related projects
+
+- [Botbuilder](https://eoinjordan.github.io/botbuilder/)
+  ([source](https://github.com/eoinjordan/botbuilder)): walking and wheeled
+  robots from the same servos and board. A configurator with recipes for small
+  printable robots: a biped on the Braccio servos and UNO Q, wheeled robots and
+  LEGO-motor walkers. It reuses this project's servo output code, App Lab
+  layout, flash-by-SSH pattern and board-served control page.
+- [unoq-braccio](https://github.com/edgeimpulse/unoq-braccio): the companion
+  repository with the Braccio meshes and Gazebo model used by the simulation.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
