@@ -76,10 +76,13 @@ Replaces the old `braccio_wrist_camera_bracket.stl` (a 56 × 44 × 49 mm,
 mounting interface: four M2 screws on a 7 mm radius cross plus a 6.2 mm centre
 bore, measured off the original bracket.
 
-The plate takes any camera: two M2 holes at `board_hole_pitch` for an
-ESP32-CAM/ESP-EYE, two strap slots for a zip tie or elastic round a USB webcam,
-a ledge for it to rest on, and a flat face if you would rather use tape.
-`-D tilt=20` cants it towards the paper.
+The cradle is sized for an **ESP-EYE v2.1**, like the camera finger. Two rails
+capture the board's long edges and hook over its front face, the ESP32 module
+on the back hangs free between them, and one M2 screw through the end brace
+picks up the board's single mounting hole to stop it sliding. Change the
+`board_*` values for a different camera. There is no tilt parameter: the plate
+stays perpendicular to the wrist axis and the arm aims the camera by rotating
+`wrist_vertical` (see `camera_poses` in `config/workspace.yaml`).
 
 ## Files
 
