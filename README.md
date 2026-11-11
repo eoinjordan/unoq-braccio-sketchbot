@@ -373,7 +373,7 @@ Equivalently, drive it exactly like the real arm over TCP:
 ./scripts/run_demo.sh agent                       # M/S sim agent on :8765
 # ...then in another shell, the normal pipeline (no --sim flag):
 .venv/bin/python -m sketch_artist.cli --image examples/sample_face_eoin.png \
-    --style cyclist --host 127.0.0.1 --port 8770
+    --style cyclist --host 127.0.0.1 --port 8765
 ```
 
 With Docker: `docker compose up -d sim` starts the agent on `:8765`, then
