@@ -66,7 +66,8 @@ S
 ```
 
 > **Angles are floats.** `move_braccio` takes `float` and the servos are driven
-> with `writeMicroseconds()`, because `write()` quantises to whole degrees — and
+> with whole-microsecond pulses (see [Pulse Precision](#pulse-precision)),
+> because `write()` quantises to whole degrees — and
 > one degree is ~3 mm at the paper, which is far too coarse to draw a face. The
 > pulse band is pinned to RoboServo's own 500–2500 µs defaults, so the existing
 > `servo_calibration` in `config/workspace.yaml` stays valid.

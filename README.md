@@ -321,19 +321,21 @@ wire did. So the `M` protocol carries **fractional degrees** end to end:
 - `arm_client.py` formats with `%g`, so whole degrees still go out as `90`;
 - the software simulator, the Gazebo bridge and the UNO Q agent all parse with
   `float()`;
-- on real hardware the sketch writes **`writeMicroseconds()`** rather than
-  `write()` — `write()` takes whole degrees and would throw the fraction away
-  again at the last possible moment. A servo's pulse band is ~10.3 µs per
-  degree, so 0.1° is about 1 µs and comfortably resolvable.
+- on real hardware the sketch converts each angle to a whole-microsecond pulse
+  (500 to 2500 us, about 11.1 us per degree) and writes it through the Zephyr
+  backend's 16-bit duty input. RoboServo's `write()` takes whole degrees, and
+  its `writeMicroseconds()` in 1.2.0 truncates to a 10-bit duty value, about
+  19.55 us or 1.76 degrees per step; either would throw the fraction away
+  again at the last possible moment.
 
-> **Installed-driver limitation:** the RoboServo 1.2.0 Zephyr backend inspected
-> on the UNO Q converts those microseconds back to a 10-bit duty value at 50 Hz.
-> That is about 19.55 microseconds, or 1.76 degrees, per PWM step. Fractional
-> numbers on the wire therefore do **not** prove fractional physical motion.
-> The two recorded small approach commands encoded exactly the same duty values
-> as the parked pose. Driver precision and the reported shaking still need
-> resolution before claiming physical drawing quality. Keep preview/testing
-> separate from supervised hardware calibration.
+> **Remaining hardware limits:** the backend timer still ticks in 4 us steps,
+> about 0.36 degrees, and the agent reports commanded angles, not encoder
+> feedback. Fractional numbers on the wire therefore do **not** prove
+> fractional physical motion. Small commands have also produced little visible
+> travel on this rig, with servo deadband and backlash the suspects, and pen
+> contact and a completed drawing remain unverified. See [validation status](docs/validation.md) and the
+> [agent's pulse precision notes](app_lab/braccio_remote_agent/README.md#pulse-precision).
+> Keep preview/testing separate from supervised hardware calibration.
 
 Set `servo_decimals: 0` in [`config/workspace.yaml`](config/workspace.yaml) if
 you are driving firmware that can only take whole degrees — you will get the
