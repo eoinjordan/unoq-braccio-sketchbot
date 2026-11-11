@@ -120,7 +120,7 @@ if "$START"; then
   extra=""
   if "$ALLOW_MOTION"; then extra=" --allow-motion"; fi
   temporary=$(mktemp "$CONFIG_HOME/systemd/user/sketchbot-studio.service.d/.install-XXXXXX")
-  printf '[Service]\nWorkingDirectory="%s"\nExecStart=\nExecStart="%s" -m web.server --port 7100%s\n' \
+  printf '[Service]\nWorkingDirectory=%s\nExecStart=\nExecStart="%s" -m web.server --port 7100%s\n' \
     "$INSTALL_DIR" "$PYTHON" "$extra" > "$temporary"
   chmod 600 "$temporary"
   mv "$temporary" "$CONFIG_HOME/systemd/user/sketchbot-studio.service.d/10-installer.conf"

@@ -76,6 +76,9 @@ def test_default_installer_creates_persistent_no_motion_service(installation):
     assert override.exists()
     assert "--allow-motion" not in override.read_text()
     assert '.venv/bin/python" -m web.server --port 7100' in override.read_text()
+    # systemd does not unquote WorkingDirectory=; a quoted path is rejected as
+    # "not absolute" and the unit fails to load.
+    assert f"WorkingDirectory={home}/unoq-braccio-sketchbot\n" in override.read_text()
     commands = log.read_text()
     assert "enable sketchbot-studio.service" in commands
     assert "arduino-app-cli" not in commands
