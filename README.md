@@ -7,7 +7,7 @@
 A **TinkerKit Braccio** and **Arduino UNO Q** studio for portrait sketching and
 supervised pick-and-place. Switch between a calibrated pen and gripper, preview
 the real tool geometry in Three.js, and use touch controls or a paired gamepad.
-ESP32 and USB cameras provide independent face and work-area views.
+ESP-EYE and USB cameras provide independent face and work-area views.
 
 ![Sketch mode with the interactive Braccio model and task controls](docs/images/studio-desktop.png)
 
@@ -86,8 +86,12 @@ bounded step at a time; releasing pauses it and Stop cancels it.
 
 **Setup** configures camera source, fixed/wrist mounting, rotation, mirroring,
 resolution and USB pixel format; paper side/position/size; arm geometry and
-servo limits; and controller axes, buttons, deadzone and speed. ESP32 snapshots,
-MJPEG, RTSP, USB video and the supplied ESP serial protocol are supported.
+servo limits; and controller axes, buttons, deadzone and speed. HTTP snapshots,
+MJPEG over HTTP, USB video and the supplied ESP-EYE serial protocol are
+supported. The camera firmware in this repository is for the Espressif ESP-EYE
+and serves JPEG snapshots (`/capture`) and MJPEG (`/stream`) over HTTP on port
+80. It has no RTSP server; the RTSP input only reads a stream from some other
+camera through OpenCV's FFmpeg backend.
 
 Startup checks the arm, USB devices, vision capabilities and paper reachability.
 It always starts in preview mode and disarmed; new settings default to child
@@ -128,7 +132,7 @@ remaining physical checks.
 
 | Role   | Device                                                 | USB ID        |
 | ------ | ------------------------------------------------------ | ------------- |
-| Camera | One shared wrist camera, or separate fixed face and observation cameras; ESP32 snapshot/stream or USB | set in Setup |
+| Camera | One shared wrist camera, or separate fixed face and observation cameras; ESP-EYE snapshot or MJPEG stream over HTTP, or USB | set in Setup |
 | Arm    | Arduino UNO Q + TinkerKit Braccio                      | —             |
 | Tool   | 3D-printed pen grip, or Braccio gripper with measured grasp-point geometry | set in Setup |
 
@@ -141,6 +145,8 @@ across reboots); find yours with `python -m sketch_artist.cameras`.
 **No USB webcam?** Flash an **ESP-EYE** (ESP32 camera) with the firmware in
 [`firmware/esp_eye_camera/`](firmware/esp_eye_camera/) and point the `single`
 camera at it over Wi-Fi (`url:`) or USB (`serial:`) in `config/cameras.yaml`.
+The firmware uses the ESP-EYE pin map. An ESP32-CAM (AI-Thinker) wires its
+camera to different pins and is not supported without changing that map.
 
 <p align="center">
   <img src="docs/images/esp-eye.png" width="200" alt="Espressif ESP-EYE camera board">

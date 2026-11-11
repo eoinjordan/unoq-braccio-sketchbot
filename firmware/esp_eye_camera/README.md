@@ -12,6 +12,11 @@ over **USB**, so it can replace the wrist USB webcam.
 Face detection runs on the UNO Q (the sketchbot's portrait pipeline); this
 firmware just delivers clean frames over whichever link is up.
 
+There is no RTSP server: the stream is MJPEG over HTTP. The pin map in the
+sketch is the ESP-EYE's. An ESP32-CAM (AI-Thinker) wires its camera to
+different pins, so it needs its own pin definitions before this sketch will
+run on it.
+
 ## Flash it
 
 1. **Arduino IDE** → install the **esp32** boards package (Espressif) via Boards

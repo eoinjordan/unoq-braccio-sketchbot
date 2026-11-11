@@ -149,9 +149,9 @@ automatically reposition the arm.
 
 | Input | Configuration | Notes |
 | --- | --- | --- |
-| HTTP snapshot | `http://<camera>/capture` | ESP32-EYE / ESP32-S3 camera firmware that serves individual images; JPEG or another OpenCV-decodable image |
-| MJPEG | `http://<camera>:81/stream` | Use the actual stream port/path provided by the camera firmware |
-| RTSP | `rtsp://<camera>/stream` | Requires the installed OpenCV FFmpeg backend |
+| HTTP snapshot | `http://<camera>/capture` | The supplied ESP-EYE firmware (`http://esp-eye.local/capture`), or other camera firmware that serves individual images; JPEG or another OpenCV-decodable image |
+| MJPEG | `http://<camera>/stream` | The supplied ESP-EYE firmware streams at `/stream` on port 80. Other firmware differs (Espressif's CameraWebServer example uses port 81); use the port and path your camera provides |
+| RTSP | `rtsp://<camera>/stream` | For a third-party RTSP camera; requires the installed OpenCV FFmpeg backend. The supplied ESP-EYE firmware does not serve RTSP |
 | USB video | Linux `/dev/videoN`, VID:PID, or macOS device index | Automatic, MJPG, YUYV, UYVY, NV12 and H264 requests; actual support depends on the driver |
 | ESP USB serial | `/dev/ttyUSB0`, `/dev/cu.*`, or `auto`, plus baud | Requires the repository's framed JPEG serial protocol and pyserial; arbitrary ESP USB firmware is not interchangeable |
 | This tablet / phone | Explicit photo capture/upload, or secure-context live video | In-memory frames expire after five minutes; no cloud upload |
