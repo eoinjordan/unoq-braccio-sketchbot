@@ -183,6 +183,7 @@ class RigConfig:
     sheet_radius_px: float = 175.0
     arm_mask_px: int = 130
     min_intruder_px: int = 1500
+    check_arm: bool = True
 
 
 @dataclass
@@ -228,13 +229,23 @@ class Rig:
         if self.reference is None or self.reference_pose is None:
             return frame
         shape = frame.shape
-        covered = watch.arm_mask(shape, self.P, self.arm, pose, self.cfg.arm_mask_px) \
-            | watch.arm_mask(shape, self.P, self.arm, self.reference_pose, self.cfg.arm_mask_px)
+        if self.cfg.check_arm:
+            seen = watch.arm_where_expected(frame, self.P, self.arm, pose)
+            if not seen.ok:
+                raise Halt("arm is not where the pose puts it after '%s' (arm colour at the "
+                           "forearm points: %s): base moved or a joint stalled"
+                           % (label, seen.fractions))
+        covered = watch.arm_mask(shape, self.P, self.arm, pose, self.cfg.arm_mask_px)             | watch.arm_mask(shape, self.P, self.arm, self.reference_pose, self.cfg.arm_mask_px)
         centre = self.base_px()
-        shift = watch.base_shift(self.reference, frame, centre, self.cfg.sheet_radius_px, covered)
-        if shift.moved:
-            raise Halt("base sheet outline changed after '%s' (%d px, %.0f%% of the sheet)"
-                       % (label, shift.changed_px, 100 * shift.fraction))
+        # The sheet outline is compared only when the arm is back in the pose
+        # of the reference frame. Anywhere else the arm, its shadow and the
+        # servo leads cross the sheet and the outline says nothing.
+        same_pose = max(abs(a - b) for a, b in zip(pose[:4], self.reference_pose[:4])) < 0.6
+        if same_pose:
+            shift = watch.base_shift(self.reference, frame, centre, self.cfg.sheet_radius_px)
+            if shift.moved:
+                raise Halt("base sheet outline changed after '%s' (%d px, %.0f%% of the sheet)"
+                           % (label, shift.changed_px, 100 * shift.fraction))
         zone = watch.disc_mask(shape, centre, self.cfg.work_zone_radius_px, self.cfg.work_zone_x_max)
         explained = covered | watch.spots_mask(shape, self.expected_spots)
         found = watch.unexplained_changes(self.reference, frame, zone, explained,

@@ -46,7 +46,7 @@ DEFAULTS = {
     "max_front_reach_mm": 140.0,
     # Provisional camera, read off a frame; replaced by "P" after calibrate.
     "nominal": {"base_px": [882, 657], "px_per_mm": 1.3, "front_angle_deg": 20.0,
-                "height_mm": 1000.0, "nadir_px": [960, 540], "mirrored": True},
+                "height_mm": 1000.0, "nadir_px": [930, 1050], "mirrored": True},
     "roi": [250, 150, 1150, 950],
     "pick": {},
     "keep_out_px": [],          # polygons in pixels that the tool must stay out of

@@ -157,3 +157,50 @@ def spots_mask(shape, spots: Sequence[Tuple[float, float, float]]) -> np.ndarray
     for x, y, r in spots:
         cv2.circle(m, (int(x), int(y)), int(r), 255, -1)
     return m
+
+
+def orange_mask(frame_bgr: np.ndarray) -> np.ndarray:
+    """Pixels the colour of the arm: redder and yellower than the floor.
+
+    A red brick is redder still but less yellow, which is what keeps it out.
+    """
+    lab = cv2.cvtColor(cv2.GaussianBlur(frame_bgr, (5, 5), 0), cv2.COLOR_BGR2LAB).astype(np.float32)
+    floor = np.median(lab.reshape(-1, 3), axis=0)
+    a, b = lab[..., 1], lab[..., 2]
+    orange = (a - floor[1] > 18.0) & (b - floor[2] > 14.0) & ((a - b) <= -6.0)
+    return orange.astype(np.uint8) * 255
+
+
+@dataclass
+class ArmSighting:
+    ok: bool
+    fractions: Tuple[float, ...]      # arm colour found at each checked point
+    points_px: Tuple[Tuple[float, float], ...]
+
+
+def arm_where_expected(frame_bgr: np.ndarray, P: np.ndarray, arm: ArmGeometry,
+                       angles: Sequence[float], disc_px: int = 30,
+                       min_fraction: float = 0.2, need: int = 2) -> ArmSighting:
+    """Is the forearm where the commanded pose puts it?
+
+    Three points along the middle of the forearm are projected into
+    the frame and each is checked for arm colour. If the base has turned or
+    slid, or a joint has stalled, the forearm is somewhere else and the
+    points land on floor. The forearm is used because it is on top and
+    visible from above in every pose.
+    """
+    orange = orange_mask(frame_bgr)
+    e = np.array(arm.point_xyz(angles, "elbow"))
+    w = np.array(arm.point_xyz(angles, "wrist"))
+    points, fractions = [], []
+    # The elbow end barely moves when the base turns and the wrist end
+    # carries a black servo, so the points sit in the middle of the link.
+    for t in (0.3, 0.5, 0.7):
+        u, v = project(P, tuple(e + t * (w - e)))
+        points.append((u, v))
+        disc = np.zeros(orange.shape, np.uint8)
+        cv2.circle(disc, (int(round(u)), int(round(v))), disc_px, 255, -1)
+        total = int(np.count_nonzero(disc))
+        fractions.append(float(np.count_nonzero(orange & disc)) / max(1, total))
+    good = sum(f >= min_fraction for f in fractions)
+    return ArmSighting(good >= need, tuple(round(f, 2) for f in fractions), tuple(points))

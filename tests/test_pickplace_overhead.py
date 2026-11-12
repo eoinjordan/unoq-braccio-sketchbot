@@ -382,3 +382,18 @@ def test_fingertip_is_the_far_end_of_the_new_white_blob():
     assert tip is not None
     assert math.hypot(tip[0] - 270, tip[1] - 254) < 12.0
     assert calibrate.find_fingertip(ref, ref, (620, 400), heading) is None
+
+
+def test_arm_where_expected_fails_when_the_base_has_turned():
+    P = camera()
+    angles = pose(-200.0, 60.0, 60.0)
+    img = np.full((1080, 1920, 3), FLOOR, np.uint8)
+    e = geo.project(P, ARM.point_xyz(angles, "elbow"))
+    w = geo.project(P, ARM.point_xyz(angles, "wrist"))
+    cv2.line(img, tuple(int(v) for v in e), tuple(int(v) for v in w), (40, 110, 240), 70)
+    assert watch.arm_where_expected(img, P, ARM, angles).ok
+    turned = (angles[0] + 25.0,) + angles[1:]          # commanded, but the arm did not follow
+    assert not watch.arm_where_expected(img, P, ARM, turned).ok
+    red = np.full((1080, 1920, 3), FLOOR, np.uint8)
+    cv2.line(red, tuple(int(v) for v in e), tuple(int(v) for v in w), COLOURS[detect.RED], 70)
+    assert not watch.arm_where_expected(red, P, ARM, angles).ok     # a red brick is not the arm
