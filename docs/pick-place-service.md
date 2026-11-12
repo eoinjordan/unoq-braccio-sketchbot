@@ -241,6 +241,30 @@ has its own wall supply; the camera was connected through a USB hub.
 
 No pick was attempted. Live mode was not enabled.
 
+## Third session: the owner's Studio tool model, reaching behind
+
+The owner's grabber bench settings (`config/runtime.yaml` in the Studio
+checkout: tool 100 mm, pitch -55, jaws 10 open and 65 closed, base height
+92, pick at x 232, y -45, z 40) were used through the Studio's own
+`workspace_for_tool` and inverse kinematics, mirrored to reach behind the
+base where the bricks and bin are. Moves were one joint at a time, 2 degree
+steps, with an overhead frame and an agent status read after each.
+
+- The Studio's own pick and place spots are in front of the base, where the
+  touchscreen, the camera lead and the USB hub lay. They were not used.
+- With that model, his pick height of 40 mm at 232 mm out is the lowest the
+  pose can reach (the elbow limit stops it), so z 40 is unlikely to be the
+  floor in his frame.
+- Three hovers at a commanded 100 to 130 mm put the claws well away from
+  the commanded point in the overhead picture: about 60 mm short at base
+  121 and 240 mm, and the base angle changed the picture angle by well under
+  half as much as expected. Mirrored behind the base, the front-side
+  calibration is not accurate enough to pick blind. Picking there needs the
+  overhead camera calibrated against the arm, or steering by eye at low
+  height.
+- The bricks lay in one touching cluster; with 45 mm between the open jaws
+  none could be gripped without hitting a neighbour. No pick was attempted.
+
 ## Incidents
 
 **1. Gripper caught the bin, base turned (2026-11-12, about 16:05).**
