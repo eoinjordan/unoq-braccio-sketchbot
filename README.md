@@ -152,22 +152,24 @@ camera to different pins and is not supported without changing that map.
   <img src="docs/images/esp-eye.png" width="200" alt="Espressif ESP-EYE camera board">
 </p>
 
-**Camera with its own screen, for pick and place.** There is also a printed
-wrist holder for a Seeed Studio XIAO ESP32S3 Sense plugged into the Round
-Display for XIAO: the camera looks past the gripper at the point between the
-claws and the screen faces the audience. It fits with the four M2 screws of
-the ESP-EYE wrist mount or with two cable ties round the wrist. Print
-`hardware/pencil-grip/braccio_wrist_xiao_round_display_fit_test.stl` first,
-then `braccio_wrist_xiao_round_display.stl` (aimed 120 mm in front of the
-finger mount; `_near` is 90 mm, `_far` is 180 mm). Print and assembly steps are
-in [hardware/pencil-grip/README.md](hardware/pencil-grip/README.md#braccio_wrist_xiao_round_display---camera-and-screen-on-the-wrist)
+**Cameras on top of the gripper, for pick and place.** Two printed holders
+stand a camera on the gripper block, just behind the finger pivots, looking
+along the fingers at the point the claws are about to close on. One takes an
+ESP-EYE (`hardware/pencil-grip/braccio_gripper_esp_eye.stl`). The other takes
+a Seeed Studio XIAO ESP32S3 Sense on the Round Display for XIAO
+(`braccio_gripper_xiao_round_display.stl`), with the screen directly behind
+the lens, facing the audience. Each fixes with cable ties round the gripper
+block or with two screws, and comes aimed 120 mm in front of the finger mount
+(`_near` is 90 mm, `_far` is 180 mm). Print the `_fit_test` piece first, and
+measure the gripper block: the saddle is drawn from a simulation mesh. Steps
+are in [hardware/pencil-grip/README.md](hardware/pencil-grip/README.md#cameras-on-top-of-the-gripper)
 and on the [parts page](https://eoinjordan.github.io/unoq-braccio-sketchbot/parts.html#holder).
-The holder is hardware only as far as this repository goes. The camera
-firmware here is for the ESP-EYE. Zephyr firmware that shows the camera
-picture and a model's result on the round display is in
-[executorch-zephyr-xiao-esp32s3](https://github.com/eoinjordan/executorch-zephyr-xiao-esp32s3);
-it does not talk to the Studio. Streaming this camera to the Studio: not
-written. Showing detections on the screen while streaming: not written.
+The ESP-EYE works with the Studio through `firmware/esp_eye_camera`. The round
+display holder is hardware only as far as this repository goes: Zephyr
+firmware that shows the camera picture and a model's result on the screen is
+in [executorch-zephyr-xiao-esp32s3](https://github.com/eoinjordan/executorch-zephyr-xiao-esp32s3),
+and it does not talk to the Studio. Streaming the XIAO camera to the Studio:
+not written. Showing detections on the screen while streaming: not written.
 
 The pencil is held by a printed part that clamps the tool with an M3 screw.
 Print `hardware/pencil-grip/braccio_pen_finger_8mm.stl` to keep the claws
@@ -594,7 +596,7 @@ firmware/          ESP-EYE camera firmware (Wi-Fi/USB image source)
 config/            Camera, workspace, drawing and branding configuration
 assets/            Edge Impulse postcard template + logo/QR slots
 hardware/          pencil-grip/: printable pencil grips, camera mounts and the
-                   XIAO round display holder (STL/SCAD, CC BY-SA 4.0)
+                   gripper-top camera holders (STL/SCAD, CC BY-SA 4.0)
                    braccio-arm/: the Braccio simulation meshes (GPL-3.0)
 site/              Setup site on GitHub Pages; parts.html lists every part
 sim/               Headless arm renderer + Gazebo M/S bridge (real model)

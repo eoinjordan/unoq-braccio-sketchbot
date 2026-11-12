@@ -35,15 +35,16 @@ metres. Nothing here has been rescaled or repaired.
 
 ## What uses them
 
-- `scripts/check_xiao_holder.py` measures the XIAO round display holder
-  against the wrist, the gripper and the forearm.
-- `xiao_round_display_on_wrist.scad` draws that holder on the wrist. The scene
-  and the two pictures rendered from it include these meshes, so they are kept
-  in this folder under the same licence:
+- `scripts/check_gripper_cameras.py` measures the two gripper-top camera
+  holders against the gripper, the wrist and the forearm.
+- `gripper_cameras_on_gripper.scad` draws those holders on the gripper. The
+  scene and the four pictures rendered from it include these meshes, so they
+  are kept in this folder under the same licence:
 
-  ![Holder fitted by the hub screws](xiao_round_display_on_wrist.png)
-
-  ![Holder fitted by cable ties](xiao_round_display_on_wrist_ties.png)
+  | | From the side | From behind, where the audience stands |
+  | --- | --- | --- |
+  | XIAO round display | ![side](gripper_xiao_round_display_side.png) | ![audience](gripper_xiao_round_display_audience.png) |
+  | ESP-EYE | ![side](gripper_esp_eye_side.png) | ![audience](gripper_esp_eye_audience.png) |
 
 - `sim/render_arm.py` and the Gazebo model load the same meshes from the
   `unoq-braccio` repository; point `--meshes` here to use this copy.

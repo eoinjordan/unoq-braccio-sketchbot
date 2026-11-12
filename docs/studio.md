@@ -156,12 +156,13 @@ automatically reposition the arm.
 | ESP USB serial | `/dev/ttyUSB0`, `/dev/cu.*`, or `auto`, plus baud | Requires the repository's framed JPEG serial protocol and pyserial; arbitrary ESP USB firmware is not interchangeable |
 | This tablet / phone | Explicit photo capture/upload, or secure-context live video | In-memory frames expire after five minutes; no cloud upload |
 
-Camera mounts for the wrist are in
-[hardware/pencil-grip](../hardware/pencil-grip/README.md): one for the ESP-EYE,
-and a holder for a XIAO ESP32S3 Sense on the Round Display for XIAO that puts
-a screen beside the camera. The second is a holder only. Firmware that serves
-that camera to the Studio over HTTP or serial is not written, so none of the
-rows above applies to it yet.
+Printed camera mounts are in
+[hardware/pencil-grip](../hardware/pencil-grip/README.md). For pick and place
+there are two that stand the camera on top of the gripper, looking along the
+fingers: one for the ESP-EYE, which the rows above cover, and one for a XIAO
+ESP32S3 Sense on the Round Display for XIAO, which puts a screen behind the
+lens. Firmware that serves the XIAO's camera to the Studio is not written, so
+none of the rows above applies to it yet.
 
 The detected-device menu excludes the UNO Q's Qualcomm encoder/decoder nodes.
 On macOS, indices can change after unplugging cameras; select the named device

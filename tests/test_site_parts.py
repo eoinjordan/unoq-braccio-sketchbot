@@ -21,7 +21,7 @@ REPO = Path(__file__).resolve().parent.parent
 SITE = REPO / "site"
 HARDWARE = REPO / "hardware"
 PARTS_PAGE = SITE / "parts.html"
-HOLDER = "braccio_wrist_xiao_round_display"
+HOLDERS = ["braccio_gripper_xiao_round_display", "braccio_gripper_esp_eye"]
 ARM_MESHES = ["base", "shoulder", "elbow", "wrist_pitch", "wrist_roll",
               "left_gripper", "right_gripper"]
 
@@ -46,10 +46,10 @@ def test_every_local_link_on_the_site_resolves(page):
     assert not missing, f"{page} links to files that are not published: {missing}"
 
 
-def test_setup_page_offers_the_holder_as_a_camera_option():
+def test_setup_page_offers_the_holders_as_camera_options():
     text = (SITE / "index.html").read_text(encoding="utf-8")
     assert 'href="./parts.html#holder"' in text
-    assert "XIAO ESP32S3 Sense" in text
+    assert "XIAO ESP32S3 Sense" in text and "ESP-EYE" in text
     assert "./parts.html" in (SITE / "sw.js").read_text(encoding="utf-8")
 
 
@@ -65,12 +65,19 @@ def test_every_mesh_and_source_is_downloadable(folder):
                                      path.read_bytes())
 
 
+@pytest.mark.parametrize("holder", HOLDERS)
 @pytest.mark.parametrize("suffix", ["", "_near", "_far", "_fit_test"])
-def test_holder_downloads_are_listed(suffix):
+def test_holder_downloads_are_listed(holder, suffix):
     text = PARTS_PAGE.read_text(encoding="utf-8")
-    assert f"{HOLDER}{suffix}.stl" in text
-    assert f"{HOLDER}.scad" in text
-    assert f"{HOLDER}_preview.png" in text
+    assert f"{holder}{suffix}.stl" in text
+    assert f"{holder}.scad" in text
+    assert f"{holder}_preview.png" in text
+    assert "braccio_gripper_camera_lib.scad" in text
+
+
+def test_the_side_arm_holder_is_gone():
+    assert not list((HARDWARE / "pencil-grip").glob("braccio_wrist_xiao*"))
+    assert "braccio_wrist_xiao" not in PARTS_PAGE.read_text(encoding="utf-8")
 
 
 def test_each_group_states_its_own_licence():
@@ -81,7 +88,7 @@ def test_each_group_states_its_own_licence():
     arm = text[text.index('id="arm"'):]
     assert "CC BY-SA 4.0" in parts and "GPL" not in parts
     assert "GNU General Public License v3.0" in arm
-    assert parts.count("<td>CC BY-SA 4.0</td>") >= 13
+    assert parts.count("<td>CC BY-SA 4.0</td>") >= 17
     assert arm.count("<td>GPL-3.0</td>") == len(ARM_MESHES)
     assert 'href="./hardware/pencil-grip/LICENSE"' in text
     assert 'href="./hardware/braccio-arm/LICENSE"' in text
@@ -116,7 +123,8 @@ def test_readme_and_top_level_licence_notes_cover_both_folders():
     assert "hardware/braccio-arm" in readme
     assert "hardware/pencil-grip/LICENSE" in readme
     assert "hardware/braccio-arm/LICENSE" in readme
-    assert f"{HOLDER}.stl" in readme
+    for holder in HOLDERS:
+        assert f"{holder}.stl" in readme
     notice = (REPO / "NOTICE.md").read_text(encoding="utf-8")
     for needle in ("MIT", "CC BY-SA 4.0", "GPL-3.0", "hardware/braccio-arm",
                    "hardware/pencil-grip"):

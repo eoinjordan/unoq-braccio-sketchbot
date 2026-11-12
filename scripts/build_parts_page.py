@@ -30,7 +30,8 @@ PAGE = SITE / "parts.html"
 REPO_URL = "https://github.com/eoinjordan/unoq-braccio-sketchbot"
 XIAO_FIRMWARE_URL = "https://github.com/eoinjordan/executorch-zephyr-xiao-esp32s3"
 
-HOLDER = "braccio_wrist_xiao_round_display"
+XIAO = "braccio_gripper_xiao_round_display"
+EYE = "braccio_gripper_esp_eye"
 
 # Folder, licence shown beside its downloads, and which files are published.
 GROUPS = {
@@ -46,14 +47,18 @@ GROUPS = {
 
 # What each mesh is, and the source it is rendered from where there is one.
 PENCIL_GRIP = [
-    (f"{HOLDER}.stl", "Wrist holder for the XIAO round display, aimed 120 mm "
-     "in front of the finger mount", f"{HOLDER}.scad"),
-    (f"{HOLDER}_near.stl", "The same holder aimed 90 mm in front",
-     f"{HOLDER}.scad"),
-    (f"{HOLDER}_far.stl", "The same holder aimed 180 mm in front",
-     f"{HOLDER}.scad"),
-    (f"{HOLDER}_fit_test.stl", "Fit piece: the display ring and latches only",
-     f"{HOLDER}.scad"),
+    (f"{XIAO}.stl", "Gripper-top holder for the XIAO round display, aimed "
+     "120 mm in front of the finger mount", f"{XIAO}.scad"),
+    (f"{XIAO}_near.stl", "The same holder aimed 90 mm in front", f"{XIAO}.scad"),
+    (f"{XIAO}_far.stl", "The same holder aimed 180 mm in front", f"{XIAO}.scad"),
+    (f"{XIAO}_fit_test.stl", "Fit piece: the display ring and latches only",
+     f"{XIAO}.scad"),
+    (f"{EYE}.stl", "Gripper-top holder for the ESP-EYE, aimed 120 mm in front "
+     "of the finger mount", f"{EYE}.scad"),
+    (f"{EYE}_near.stl", "The same holder aimed 90 mm in front", f"{EYE}.scad"),
+    (f"{EYE}_far.stl", "The same holder aimed 180 mm in front", f"{EYE}.scad"),
+    (f"{EYE}_fit_test.stl", "Fit piece: the ESP-EYE frame and latches only",
+     f"{EYE}.scad"),
     ("braccio_wrist_camera_mount.stl", "Wrist mount for an ESP-EYE",
      "braccio_wrist_camera_mount.scad"),
     ("braccio_camera_finger.stl", "ESP-EYE cradle beside a whole finger",
@@ -73,6 +78,8 @@ PENCIL_GRIP = [
 ]
 
 SHARED_SOURCES = [
+    ("braccio_gripper_camera_lib.scad", "Gripper saddle, ties, screw slots and "
+     "aim, shared by the two gripper-top holders"),
     ("braccio_grip_lib.scad", "Shared clamp and finger geometry"),
     ("braccio_pencil_grip.scad", "Split collar, all bore sizes"),
     ("braccio_pen_finger.scad", "Pen finger, all bore sizes"),
@@ -157,71 +164,77 @@ def render():
   <title>Sketchbot Studio / Printable parts and models</title>
 </head>
 <body>
-  <header class="masthead"><a class="brand" href="./"><span>Sketchbot <b>Studio</b></span></a><nav><a href="./">Setup</a><a href="#holder">Display holder</a><a href="#parts">Parts</a><a href="#arm">Arm meshes</a><a href="{REPO_URL}" target="_blank" rel="noopener noreferrer">Source</a></nav></header>
+  <header class="masthead"><a class="brand" href="./"><span>Sketchbot <b>Studio</b></span></a><nav><a href="./">Setup</a><a href="#holder">Gripper cameras</a><a href="#parts">Parts</a><a href="#arm">Arm meshes</a><a href="{REPO_URL}" target="_blank" rel="noopener noreferrer">Source</a></nav></header>
   <main class="parts-page">
     <div class="title-row"><div><p class="eyebrow">ARDUINO UNO Q / BRACCIO</p><h1>Printable parts and models</h1></div><span class="release-tag">STL and OpenSCAD</span></div>
     <p class="parts-intro">Everything here is generated from <a href="{REPO_URL}/tree/main/hardware">hardware/</a> in the repository. Three licences apply, one per group, and each is stated beside its downloads. The Studio software itself is MIT.</p>
 
     <section id="holder" class="parts-section">
-      <div class="section-heading"><span class="step">01</span><h2>Wrist display and camera holder</h2><a href="{REPO_URL}/blob/main/hardware/pencil-grip/README.md#braccio_wrist_xiao_round_display---camera-and-screen-on-the-wrist" target="_blank" rel="noopener noreferrer">Full notes</a></div>
+      <div class="section-heading"><span class="step">01</span><h2>Cameras on top of the gripper</h2><a href="{REPO_URL}/blob/main/hardware/pencil-grip/README.md#cameras-on-top-of-the-gripper" target="_blank" rel="noopener noreferrer">Full notes</a></div>
+      <p>Two camera options for pick and place. Each stands on the flat face of the gripper block, just behind the finger pivots, and looks forward along the fingers and down at the point the claws are about to close on. Because it is on the gripper it follows wrist roll. Licence: CC BY-SA 4.0. The pictures include the GPL-3.0 arm meshes.</p>
       <div class="parts-figure">
-        <img src="{grip}/{HOLDER}_preview.png" width="1400" height="1050" alt="The holder as printed: display ring with three latches, hub with four screw holes and the tie saddle">
-        <img src="{arm}/xiao_round_display_on_wrist.png" width="1400" height="1050" alt="The holder on the Braccio wrist model, fitted by the hub screws, with the display and XIAO in the ring">
+        <figure><img src="{arm}/gripper_xiao_round_display_side.png" width="1400" height="1050" alt="XIAO round display holder on the gripper model, seen from the side: the ring stands on the gripper block and the camera looks forward and down along the fingers"><figcaption>XIAO ESP32S3 Sense on the Round Display, from the side.</figcaption></figure>
+        <figure><img src="{arm}/gripper_xiao_round_display_audience.png" width="1400" height="1050" alt="The same holder seen from behind: the round screen faces back up the arm"><figcaption>The same, from behind: the screen faces the audience.</figcaption></figure>
+        <figure><img src="{arm}/gripper_esp_eye_side.png" width="1400" height="1050" alt="ESP-EYE holder on the gripper model, seen from the side: the board stands upright on the gripper block with the lens looking forward"><figcaption>ESP-EYE, from the side.</figcaption></figure>
+        <figure><img src="{arm}/gripper_esp_eye_audience.png" width="1400" height="1050" alt="The ESP-EYE holder seen from behind, with the USB plug leaving upwards"><figcaption>ESP-EYE, from behind.</figcaption></figure>
       </div>
-      <p>A camera option for pick and place. It holds a Seeed Studio Round Display for XIAO with a XIAO ESP32S3 Sense plugged into the back. The camera looks past the gripper at the point between the claws; the screen faces the other way, towards the people watching. Licence: CC BY-SA 4.0. The right-hand picture includes the GPL-3.0 arm meshes.</p>
+      <div class="parts-scroll"><table class="parts-table">
+        <thead><tr><th>Holder</th><th>Aimed in front of the finger mount</th><th>Tilt</th><th>Lens above the gripper centre line</th><th>Closed claws cover</th></tr></thead>
+        <tbody>
+          <tr><td>{link("pencil-grip", XIAO + "_near.stl")}</td><td>90 mm</td><td>17.3 deg</td><td>21.0 mm</td><td>20 percent of the picture</td></tr>
+          <tr><td>{link("pencil-grip", XIAO + ".stl")}</td><td>120 mm</td><td>13.3 deg</td><td>22.8 mm</td><td>13 percent</td></tr>
+          <tr><td>{link("pencil-grip", XIAO + "_far.stl")}</td><td>180 mm</td><td>9.0 deg</td><td>24.8 mm</td><td>8 percent</td></tr>
+          <tr><td>{link("pencil-grip", EYE + "_near.stl")}</td><td>90 mm</td><td>11.3 deg</td><td>16.5 mm</td><td>29 percent</td></tr>
+          <tr><td>{link("pencil-grip", EYE + ".stl")}</td><td>120 mm</td><td>8.6 deg</td><td>17.0 mm</td><td>23 percent</td></tr>
+          <tr><td>{link("pencil-grip", EYE + "_far.stl")}</td><td>180 mm</td><td>5.8 deg</td><td>17.5 mm</td><td>15 percent</td></tr>
+        </tbody>
+      </table></div>
+      <p>The claw tips are 61.4 mm in front of the finger mount, so the default aims 59 mm past them. Open and half-open claws are outside the picture; the cover figures are for claws fully closed, measured on the model's flat 101 mm blades with a 66 degree lens.</p>
       <div class="parts-columns">
         <div>
           <h3>Downloads</h3>
           <ul>
-            <li>{link("pencil-grip", HOLDER + ".stl")}: aimed 120 mm in front of the finger mounting face, 59 mm past the closed claws. Tilt 20.7 degrees.</li>
-            <li>{link("pencil-grip", HOLDER + "_near.stl")}: aimed 90 mm in front. Tilt 25.6 degrees.</li>
-            <li>{link("pencil-grip", HOLDER + "_far.stl")}: aimed 180 mm in front. Tilt 15.0 degrees.</li>
-            <li>{link("pencil-grip", HOLDER + "_fit_test.stl")}: the display ring and latches on their own. Print this first.</li>
-            <li>{link("pencil-grip", HOLDER + ".scad")}: OpenSCAD source. Every dimension is a named value at the top, with where it came from.</li>
-            <li>{link("pencil-grip", HOLDER + "_preview.png")} and {link("braccio-arm", "xiao_round_display_on_wrist.png")}, {link("braccio-arm", "xiao_round_display_on_wrist_ties.png")}: pictures.</li>
+            <li>Fit pieces, to print first: {link("pencil-grip", XIAO + "_fit_test.stl")} (the display ring) and {link("pencil-grip", EYE + "_fit_test.stl")} (the ESP-EYE frame).</li>
+            <li>Sources: {link("pencil-grip", XIAO + ".scad")}, {link("pencil-grip", EYE + ".scad")} and the saddle they share, {link("pencil-grip", "braccio_gripper_camera_lib.scad")}. Every dimension is a named value with where it came from.</li>
+            <li>Pictures: {link("pencil-grip", XIAO + "_preview.png")}, {link("pencil-grip", EYE + "_preview.png")}, and the four above.</li>
           </ul>
           <h3>Parts list</h3>
           <ul>
-            <li>Seeed Studio Round Display for XIAO (1.28 inch, 43 mm board).</li>
-            <li>Seeed Studio XIAO ESP32S3 Sense with its camera board, on soldered pin headers.</li>
-            <li>Either 4 x M2 screws, the ones the ESP-EYE wrist mount uses, or 2 x cable ties, 2.5 mm or 3.6 mm wide and at least 250 mm long.</li>
-            <li>USB-C cable with slack for the wrist, or a small LiPo with a JST 1.25 plug.</li>
-            <li>1 x 2.5 mm cable tie for the cable or the battery.</li>
+            <li>Either a Seeed Studio Round Display for XIAO with a XIAO ESP32S3 Sense on soldered pin headers, or an Espressif ESP-EYE v2.1.</li>
+            <li>To fix it: 1 or 2 cable ties, 2.5 mm or 3.6 mm wide and at least 200 mm long, or 2 x M3 screws.</li>
+            <li>A USB cable with slack for the wrist. The round display can run from a small LiPo with a JST 1.25 plug instead.</li>
           </ul>
+          <h3>Measure the gripper first</h3>
+          <p>The saddle is drawn from the simulation mesh, which shows the gripper block as a 4.5 mm plate. Yours is thicker and carries the gripper servo. Measure the width of the face at two points along it, and the thickness, and set <code>block_half_width</code>, <code>block_taper</code>, <code>block_thickness</code> and <code>servo_clear</code> in the shared source before you export a holder.</p>
         </div>
         <div>
           <h3>Print</h3>
           <ol>
-            <li>Print the fit piece and press the display into it from the back, screen first. The board's front rim should seat on the bevel and the three latches should click over its back.</li>
-            <li>Measure your board against the values marked ESTIMATE in the source. If the fit piece is tight or loose, change <code>board_fit</code>, <code>display_pcb_thick</code> or <code>board_slack</code> and export again.</li>
-            <li>Print the holder as exported: rear rim of the ring on the bed, screen side up. PETG or PLA, 0.2 mm layers, 4 walls, 30 to 40 percent infill, no supports. The only bridge is 12 mm, over the battery plug notch.</li>
-          </ol>
-          <h3>Fit it with screws</h3>
-          <ol>
-            <li>Use this where the ESP-EYE wrist mount goes: the hub has the same four M2 holes on a 7 mm radius and the same centre bore.</li>
-            <li>Turn the holder so the ring is on the side away from the pen collar, then screw the hub down.</li>
-            <li>Press the display in with the XIAO's USB-C end at the gap beside the saddle.</li>
-            <li>Tie the cable to the saddle face, leaving a loop long enough for the wrist to roll a quarter turn each way. A small LiPo sits on the same face.</li>
+            <li>Print the fit piece for your camera and press the board into it. The round display goes in from the back, screen first; the ESP-EYE goes in back first, camera end under the fixed hook, then the USB end past the two latches.</li>
+            <li>If it is tight or loose, change <code>board_fit</code> or <code>board_slack</code> and export again. Check the values marked ESTIMATE in the source against your board.</li>
+            <li>Print the holder as exported, lens side on the bed. PETG or PLA, 0.2 mm layers, 4 walls, 30 to 40 percent infill, no supports. Bridges are 12 mm or less.</li>
           </ol>
           <h3>Fit it with cable ties</h3>
           <ol>
-            <li>Turn the holder round so the saddle meets the wrist body, below the roll joint: pad on one cheek, a jaw round each edge, lip over the top.</li>
-            <li>Lay the gripper servo lead in the groove down the middle of the pad, or keep it outside the ties altogether.</li>
-            <li>Thread one tie through each tunnel and round the wrist. They sit 6 mm and 20 mm below the roll joint. Pull them tight and trim the tails.</li>
-            <li>Tie the cable or the battery to the hub, which now stands clear on the outside.</li>
+            <li>Sit the saddle on the top face of the gripper block, jaws down the two sloping edges, and push it forward until the jaws are snug.</li>
+            <li>Thread a tie through the front tunnel, just behind the finger pivots, and round the block. It passes over the finger bases in a bridge, clear of them. Add the rear tie, behind the servo, if you want two.</li>
+            <li>Keep the gripper servo lead outside the ties, open and close the claws by hand to see nothing rubs, then pull the ties tight and trim them.</li>
+          </ol>
+          <h3>Fit it with screws</h3>
+          <ol>
+            <li>The pad has two slots for M3 screws. None of the references this part was drawn from shows a fixing point on the gripper block, so their position is a placeholder.</li>
+            <li>Find two holes or studs on your gripper block, measure them, and set <code>screw_spacing</code>, <code>screw_centre_x</code> and <code>screw_z</code>. Export and print.</li>
           </ol>
         </div>
       </div>
-      <h3>What the two fittings do differently</h3>
-      <p>Screwed on, the holder turns with the gripper, so the picture stays square to the claws at every roll angle. Tied on, it stays with the wrist: the camera still looks at the same point on the gripper's centre line, from 14 to 21 mm further back depending on the aim distance, but the claws cross the view when the gripper is rolled close to a quarter turn. With ties, use the default or far holder or a right-angle USB-C plug: the near holder brings a straight plug within 1 mm of a fully open claw at a quarter turn.</p>
       <h3>Software</h3>
       <table class="parts-table">
         <thead><tr><th>Piece</th><th>State</th></tr></thead>
         <tbody>
-          <tr><td>Studio camera sources</td><td>USB cameras, and ESP-EYE boards over HTTP or serial with <a href="{REPO_URL}/tree/main/firmware/esp_eye_camera">firmware/esp_eye_camera</a>. That sketch's pin map is for the ESP-EYE; it does not run on a XIAO ESP32S3 Sense as it stands.</td></tr>
-          <tr><td>Camera picture and a result on the round display</td><td>Written, in a separate repository: <a href="{XIAO_FIRMWARE_URL}">executorch-zephyr-xiao-esp32s3</a>. Zephyr firmware for this board pair that shows the camera crop, the digit an MNIST model reads from it and the inference time. It does not talk to the Studio.</td></tr>
-          <tr><td>Streaming this camera to the Studio</td><td>Not written.</td></tr>
-          <tr><td>Showing pick-and-place detections on the screen while streaming</td><td>Not written.</td></tr>
+          <tr><td>ESP-EYE to the Studio</td><td>Written: <a href="{REPO_URL}/tree/main/firmware/esp_eye_camera">firmware/esp_eye_camera</a> serves snapshots and MJPEG over HTTP, or frames over USB serial.</td></tr>
+          <tr><td>Camera picture and a result on the round display</td><td>Written, in a separate repository: <a href="{XIAO_FIRMWARE_URL}">executorch-zephyr-xiao-esp32s3</a>. Zephyr firmware for the XIAO and round display that shows the camera crop, the digit an MNIST model reads from it and the inference time. It does not talk to the Studio.</td></tr>
+          <tr><td>Streaming the XIAO camera to the Studio</td><td>Not written.</td></tr>
+          <tr><td>Showing pick-and-place detections on the round display while streaming</td><td>Not written.</td></tr>
         </tbody>
       </table>
     </section>
@@ -252,7 +265,7 @@ def render():
 {mesh_rows("braccio-arm", BRACCIO_ARM)}
         </tbody>
       </table></div>
-      <p>Also in this group, under the same licence because they include the meshes: {link("braccio-arm", "xiao_round_display_on_wrist.scad")}, the scene that draws the display holder on the wrist, and the two pictures rendered from it.</p>
+      <p>Also in this group, under the same licence because they include the meshes: {link("braccio-arm", "gripper_cameras_on_gripper.scad")}, the scene that draws the camera holders on the gripper, and the four pictures rendered from it.</p>
     </section>
   </main>
   <footer><span>Sketchbot Studio / Edge Impulse + Arduino UNO Q</span><a href="{REPO_URL}/blob/main/docs/safety.md" target="_blank" rel="noopener noreferrer">Safety and supervision</a></footer>

@@ -13,7 +13,7 @@ Three licences apply. Which one covers a file depends on the folder it is in.
 ## hardware/pencil-grip (CC BY-SA 4.0)
 
 The printable Sketchbot parts and their OpenSCAD sources: pencil grips, pen
-fingers, camera mounts, the XIAO round display holder, the Braccio finger
+fingers, camera mounts, the two gripper-top camera holders, the Braccio finger
 reference mesh and the preview pictures. By *eoinedge*, published as
 [Thingiverse thing:7382987](https://www.thingiverse.com/thing:7382987).
 
@@ -24,12 +24,12 @@ Seven STL meshes of the Braccio arm, copied unmodified from
 (article: <https://opus.stedden.org/2020/08/braccio-moveit-gazebo/>). They are
 simulation visual meshes in millimetres.
 
-The folder also holds `xiao_round_display_on_wrist.scad` and the two pictures
-rendered from it. They show the round display holder on those meshes, so they
-are kept with them under GPL-3.0.
+The folder also holds `gripper_cameras_on_gripper.scad` and the four pictures
+rendered from it. They show the camera holders on those meshes, so they are
+kept with them under GPL-3.0.
 
 Nothing outside that folder and its site copy includes the meshes.
-`scripts/check_xiao_holder.py` and `sim/render_arm.py` read them at run time;
+`scripts/check_gripper_cameras.py` and `sim/render_arm.py` read them at run time;
 what they write goes to `output/`, which is not committed.
 
 ## Bundled web assets

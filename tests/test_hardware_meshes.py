@@ -88,32 +88,39 @@ def test_configured_pen_length_matches_the_printed_grip(workspace_cfg, part):
         f"the collar")
 
 
-HOLDER = "braccio_wrist_xiao_round_display"
+GRIPPER_CAMERAS = ["braccio_gripper_xiao_round_display",
+                   "braccio_gripper_esp_eye"]
 
 
+@pytest.mark.parametrize("holder", GRIPPER_CAMERAS)
 @pytest.mark.parametrize("suffix", ["", "_near", "_far", "_fit_test"])
-def test_xiao_holder_is_exported_ready_to_print(suffix):
+def test_gripper_camera_is_exported_ready_to_print(holder, suffix):
     """Every variant comes from the one source and sits on the bed as
-    exported: rear rim of the display ring at z = 0, nothing below it."""
-    assert (PARTS / f"{HOLDER}.scad").exists()
-    report = inspect_stl(PARTS / f"{HOLDER}{suffix}.stl")
+    exported, nothing below z = 0."""
+    assert (PARTS / f"{holder}.scad").exists()
+    assert (PARTS / "braccio_gripper_camera_lib.scad").exists()
+    report = inspect_stl(PARTS / f"{holder}{suffix}.stl")
     assert report.is_printable
     assert report.min_mm[2] == pytest.approx(0.0, abs=0.01)
     assert max(report.size_mm) < 120, "should fit a small printer's bed"
 
 
-def test_xiao_holder_fit_piece_is_just_the_display_ring():
-    ring = inspect_stl(PARTS / f"{HOLDER}_fit_test.stl")
-    holder = inspect_stl(PARTS / f"{HOLDER}.stl")
-    # 43.1 mm board + 0.3 mm clearance + 4.0 mm wall, each side
-    assert ring.size_mm[1] == pytest.approx(51.7, abs=0.05)
-    assert ring.size_mm[2] == pytest.approx(6.2, abs=0.05)
-    assert ring.volume_cm3 < holder.volume_cm3 / 4
+@pytest.mark.parametrize("holder, across", [
+    ("braccio_gripper_xiao_round_display", 51.7),   # 43.1 board + 2 x (0.3 + 4.0)
+    ("braccio_gripper_esp_eye", 28.8),              # 21.0 board + 2 x (0.3 + 3.6)
+])
+def test_gripper_camera_fit_piece_is_just_the_board_holder(holder, across):
+    piece = inspect_stl(PARTS / f"{holder}_fit_test.stl")
+    whole = inspect_stl(PARTS / f"{holder}.stl")
+    assert min(piece.size_mm[0], piece.size_mm[1]) == pytest.approx(across, abs=1.1)
+    assert piece.size_mm[2] < 7
+    assert piece.volume_cm3 < whole.volume_cm3 / 2
 
 
-def test_xiao_holder_tilt_variants_differ():
-    """near / default / far aim at 90 / 120 / 180 mm, so the hub sits at a
-    different angle to the ring in each."""
-    volumes = {suffix: inspect_stl(PARTS / f"{HOLDER}{suffix}.stl").volume_cm3
-               for suffix in ("_near", "", "_far")}
-    assert volumes["_near"] > volumes[""] > volumes["_far"]
+@pytest.mark.parametrize("holder", GRIPPER_CAMERAS)
+def test_gripper_camera_tilt_variants_differ(holder):
+    """near / default / far aim at 90 / 120 / 180 mm, so the saddle meets the
+    board holder at a different angle in each."""
+    heights = [inspect_stl(PARTS / f"{holder}{suffix}.stl").size_mm[2]
+               for suffix in ("_near", "", "_far")]
+    assert heights[0] < heights[1] < heights[2]
