@@ -340,7 +340,7 @@ def test_calibration_recovers_the_camera_and_the_tool_length():
     from sketch_artist.pickplace_overhead import calibrate
     true_arm = geo.ArmGeometry(tool_mm=190.0)
     P = camera()
-    poses = calibrate.calibration_poses(true_arm, [70, 95, 120, 145, 170])
+    poses = calibrate.calibration_poses(true_arm, [70, 95, 120, 145, 170], (250.0, 290.0, 330.0))
     assert len(poses) >= 25
     assert min(true_arm.chain(p)["tip"][1] for p in poses) >= 149.0     # never near the floor
     rng = np.random.default_rng(4)
@@ -360,7 +360,7 @@ def test_calibration_recovers_the_camera_and_the_tool_length():
 def test_calibration_drops_a_sighting_that_landed_on_a_cable():
     from sketch_artist.pickplace_overhead import calibrate
     P = camera()
-    poses = calibrate.calibration_poses(ARM, [70, 95, 120, 145, 170])
+    poses = calibrate.calibration_poses(ARM, [70, 95, 120, 145, 170], (250.0, 290.0, 330.0))
     samples = [calibrate.Sample(p, geo.project(P, ARM.point_xyz(p, "tip"))) for p in poses]
     u, v = samples[5].pixel
     samples[5] = calibrate.Sample(samples[5].angles, (u + 90.0, v - 60.0))

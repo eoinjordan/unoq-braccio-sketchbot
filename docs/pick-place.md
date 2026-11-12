@@ -220,6 +220,10 @@ by the Studio: the Studio's motion is hold-to-run under an armed session, and
 an unattended loop does not fit that interlock without rewriting it. Do not
 run pick and place while a Studio session is armed.
 
+**At boot.** [pick-place-service.md](pick-place-service.md) covers running
+this as a service that waits for a Start press, the reach-behind option,
+and what was measured on the floor rig.
+
 **Stopping.** The Stop button, Ctrl-C, or the camera falling silent for
 `watchdog_s` all end the run and stop commands being sent. The arm holds its
 last pose and the claws stay as they are, so a held brick is not dropped.

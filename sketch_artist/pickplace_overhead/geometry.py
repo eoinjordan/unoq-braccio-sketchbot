@@ -46,7 +46,9 @@ class ArmGeometry:
     base_height_mm: float = 92.0      # floor to shoulder axis
     upper_arm_mm: float = 125.0
     forearm_mm: float = 125.0
-    tool_mm: float = 190.0            # wrist pitch axis to fingertips: MEASURE IT
+    # Wrist pitch axis to fingertips. 105 was read off a photo of the short
+    # printed fingers; the stock Braccio gripper is longer. MEASURE IT.
+    tool_mm: float = 105.0
     # Firmware clamps for base, shoulder, elbow, wrist pitch, wrist roll, jaws.
     limits: Tuple[Tuple[float, float], ...] = (
         (0, 180), (15, 165), (0, 180), (0, 180), (0, 180), (10, 110))

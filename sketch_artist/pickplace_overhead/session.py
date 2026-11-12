@@ -6,7 +6,8 @@ Stages, in the order a new rig needs them:
 
     detect      one frame, detections drawn on it; no motion
     level       hold the arm level and high so tool length and jaws can be
-                read off the picture
+                read off the picture (--wrists steps the wrist to find where
+                the gripper is in line with the forearm)
     calibrate   fit the camera (and the tool length) from fingertip sightings
     column      lower the closed gripper over bare floor in small steps
     plan        dry run: which bricks are reachable, and the waypoints
@@ -41,7 +42,7 @@ DEFAULTS = {
     "arm_host": "192.168.1.63",
     "arm_port": 8765,
     "base_height_mm": 92.0,
-    "tool_mm": 190.0,
+    "tool_mm": 105.0,
     "base_range": [60.0, 172.0],
     "max_front_reach_mm": 140.0,
     # Provisional camera, read off a frame; replaced by "P" after calibrate.
@@ -418,17 +419,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("stage", choices=["detect", "level", "calibrate", "fit", "column", "plan", "pick", "park"])
     ap.add_argument("--state", required=True, help="directory for state.json, frames and logs")
     ap.add_argument("--set", action="append", default=[], metavar="KEY=JSON",
-                    help="set a state value first, e.g. --set tool_mm=190 or --set pick.bin_rim_mm=80")
+                    help="set a state value first, e.g. --set tool_mm=105 or --set pick.bin_rim_mm=80")
     ap.add_argument("--base", type=float, default=140.0)
     ap.add_argument("--jaws", type=_floats, default=None)
     ap.add_argument("--rolls", type=_floats, default=[])
     ap.add_argument("--wrists", type=_floats, default=[],
                     help="level stage: wrist servo angles to step through")
     ap.add_argument("--bases", type=_floats, default=[70, 95, 120, 145, 170])
-    ap.add_argument("--reaches", type=_floats, default=[250, 290, 330])
+    ap.add_argument("--reaches", type=_floats, default=[170, 205, 240])
     ap.add_argument("--heights", type=_floats, default=[150, 195, 240])
     ap.add_argument("--pitches", type=_floats, default=[0, -25, -50])
-    ap.add_argument("--tool-range", type=_floats, default=[150, 230])
+    ap.add_argument("--tool-range", type=_floats, default=[80, 200])
     ap.add_argument("--search-px", type=float, default=170.0)
     ap.add_argument("--pixel", type=_floats, default=None)
     ap.add_argument("--xy", type=_floats, default=None)

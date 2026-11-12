@@ -7,7 +7,17 @@ and is independent of the Studio pick-and-place panel and of the wrist
 camera work.
 
 This page covers the rig the code was developed on, how the pieces fit, how
-to run it, what was measured, and what is not done.
+to run it, and what is not done.
+
+**Status on 2026-11-12.** Detection, the dry-run plan, the camera, the
+checked moves and the level-pose stage have run on the real rig. The camera
+calibration against the arm and the pick itself have not: the first
+calibration attempt caught the bin, the base was then moved several times,
+and the board reset under servo load in a stretched pose. Both incidents
+are written up in [pick-place-service.md](pick-place-service.md#incidents).
+There is no measured calibration residual and no brick has been picked
+with this code. Everything about calibration and picking below describes
+what the code does, tested on synthetic data only.
 
 ## Rig
 
@@ -58,13 +68,14 @@ tops.
 
 Nothing in the calibration goes near the floor, the bin or the bricks. The
 first version did, with a tool length taken from a configuration file, and
-it caught the bin (see Incidents).
+it caught the bin
+([incident 1](pick-place-service.md#incidents)).
 
 **Reach** (`geometry.py`). The sketchbot kinematics reach forward with a
 pen. The gripper is longer, and on the development rig the bricks were
 behind the base, so the arm leans over its shoulder (shoulder servo above
-90): the mirror image of the forward pose. With a 190 mm gripper the usable
-tool pitch changes with height, so each brick gets a column of poses
+90): the mirror image of the forward pose. The usable tool pitch changes
+with height, so each brick gets a column of poses
 straight above it, every 14 mm, each at the steepest pitch the joints allow.
 
 **Plan** (`plan.py`). For each brick: turn, hover, descend the column,
@@ -128,4 +139,9 @@ agent and neither knows about the other.
   touching the floor.
 - No force or position feedback from the servos. A stalled joint is only
   noticed if it shows in the picture.
+- The calibration poses hold the arm stretched out, which is where the
+  board has reset under servo load. Do not run `calibrate` or `level` until
+  the servo supply is known to hold; when it does not, the arm falls.
+- The person check watches a margin around the arm's silhouette, about
+  115 mm. Someone sitting beyond it does not stop a run.
 - One camera gives no depth. Stacked or leaning bricks are not handled.

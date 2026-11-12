@@ -35,7 +35,7 @@ class Sample:
 
 
 def calibration_poses(arm: ArmGeometry, bases: Sequence[float],
-                      reaches: Sequence[float] = (250.0, 290.0, 330.0),
+                      reaches: Sequence[float] = (170.0, 205.0, 240.0),
                       heights: Sequence[float] = (150.0, 195.0, 240.0),
                       pitches: Sequence[float] = (0.0, -25.0, -50.0),
                       jaws: float = 60.0, behind: bool = True) -> List[Angles]:
