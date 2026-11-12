@@ -1,5 +1,5 @@
-const CACHE = "sketchbot-setup-v2";
-const FILES = ["./", "./index.html", "./style.css", "./assets/setup.js", "./assets/setup.css",
+const CACHE = "sketchbot-setup-v3";
+const FILES = ["./", "./index.html", "./parts.html", "./style.css", "./assets/setup.js", "./assets/setup.css",
   "./manifest.webmanifest", "./assets/icon-192.png", "./assets/icon-512.png", "./assets/studio-preview.png"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting()));

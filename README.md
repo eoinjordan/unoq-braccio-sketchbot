@@ -152,6 +152,23 @@ camera to different pins and is not supported without changing that map.
   <img src="docs/images/esp-eye.png" width="200" alt="Espressif ESP-EYE camera board">
 </p>
 
+**Camera with its own screen, for pick and place.** There is also a printed
+wrist holder for a Seeed Studio XIAO ESP32S3 Sense plugged into the Round
+Display for XIAO: the camera looks past the gripper at the point between the
+claws and the screen faces the audience. It fits with the four M2 screws of
+the ESP-EYE wrist mount or with two cable ties round the wrist. Print
+`hardware/pencil-grip/braccio_wrist_xiao_round_display_fit_test.stl` first,
+then `braccio_wrist_xiao_round_display.stl` (aimed 120 mm in front of the
+finger mount; `_near` is 90 mm, `_far` is 180 mm). Print and assembly steps are
+in [hardware/pencil-grip/README.md](hardware/pencil-grip/README.md#braccio_wrist_xiao_round_display---camera-and-screen-on-the-wrist)
+and on the [parts page](https://eoinjordan.github.io/unoq-braccio-sketchbot/parts.html#holder).
+The holder is hardware only as far as this repository goes. The camera
+firmware here is for the ESP-EYE. Zephyr firmware that shows the camera
+picture and a model's result on the round display is in
+[executorch-zephyr-xiao-esp32s3](https://github.com/eoinjordan/executorch-zephyr-xiao-esp32s3);
+it does not talk to the Studio. Streaming this camera to the Studio: not
+written. Showing detections on the screen while streaming: not written.
+
 The pencil is held by a printed part that clamps the tool with an M3 screw.
 Print `hardware/pencil-grip/braccio_pen_finger_8mm.stl` to keep the claws
 working alongside the pen, or `braccio_pencil_grip_8mm.stl` for the more rigid
@@ -423,12 +440,14 @@ ros2 launch braccio_sim sketchbot_gazebo.launch.py   # Gazebo + Braccio + bridge
 
 See [sim/gazebo/README.md](sim/gazebo/README.md) for the build/run steps. No ROS
 box handy? Render the **same** model + meshes headlessly with the sketchbot
-driving it (needs the `unoq-braccio` meshes; the render derives from GPL-3.0
-meshes, so generate it locally rather than committing it):
+driving it. The meshes are in [hardware/braccio-arm](hardware/braccio-arm)
+under GPL-3.0. A render derives from them, so generate it locally into
+`output/`, or keep it in that folder under the same licence, rather than
+committing it among the MIT-licensed images:
 
 ```bash
 .venv/bin/pip install trimesh matplotlib scipy
-.venv/bin/python -m sim.render_arm --out output/gazebo_caricature.png
+.venv/bin/python -m sim.render_arm --meshes hardware/braccio-arm --out output/gazebo_caricature.png
 ```
 
 ## Testing
@@ -574,7 +593,10 @@ app_lab/           Arduino App Lab arm-control agent (deploy to the UNO Q)
 firmware/          ESP-EYE camera firmware (Wi-Fi/USB image source)
 config/            Camera, workspace, drawing and branding configuration
 assets/            Edge Impulse postcard template + logo/QR slots
-hardware/          3D-printable Braccio pencil grip + camera mounts (STL/SCAD)
+hardware/          pencil-grip/: printable pencil grips, camera mounts and the
+                   XIAO round display holder (STL/SCAD, CC BY-SA 4.0)
+                   braccio-arm/: the Braccio simulation meshes (GPL-3.0)
+site/              Setup site on GitHub Pages; parts.html lists every part
 sim/               Headless arm renderer + Gazebo M/S bridge (real model)
 scripts/           Camera listing, model fetch, calibration and demo runner helpers
 tests/             pytest suite (pipeline, kinematics, sim, end-to-end)
@@ -595,8 +617,13 @@ examples/          A sample face image for dry runs
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Three licences apply, by folder. [NOTICE.md](NOTICE.md) has the detail.
 
-The 3D-printable files in `hardware/pencil-grip/` are **CC BY-SA 4.0**
-(by *eoinedge*, [Thingiverse thing:7382987](https://www.thingiverse.com/thing:7382987));
-see [hardware/pencil-grip/LICENSE](hardware/pencil-grip/LICENSE).
+| Where | Licence |
+| --- | --- |
+| Everything not listed below | MIT, see [LICENSE](LICENSE) |
+| `hardware/pencil-grip/` and its copy in `site/hardware/pencil-grip/` | CC BY-SA 4.0, see [hardware/pencil-grip/LICENSE](hardware/pencil-grip/LICENSE). By *eoinedge*, [Thingiverse thing:7382987](https://www.thingiverse.com/thing:7382987). |
+| `hardware/braccio-arm/` and its copy in `site/hardware/braccio-arm/` | GPL-3.0, see [hardware/braccio-arm/LICENSE](hardware/braccio-arm/LICENSE). Meshes from [lots-of-things/braccio_moveit_gazebo](https://github.com/lots-of-things/braccio_moveit_gazebo). |
+
+Every part and mesh, with its size, licence and download link, is listed on
+the [parts page](https://eoinjordan.github.io/unoq-braccio-sketchbot/parts.html).
