@@ -86,3 +86,34 @@ def test_configured_pen_length_matches_the_printed_grip(workspace_cfg, part):
     assert configured <= shortest + 60, (
         f"wrist_pen_mm={configured:.0f} implies over 60 mm of pencil proud of "
         f"the collar")
+
+
+HOLDER = "braccio_wrist_xiao_round_display"
+
+
+@pytest.mark.parametrize("suffix", ["", "_near", "_far", "_fit_test"])
+def test_xiao_holder_is_exported_ready_to_print(suffix):
+    """Every variant comes from the one source and sits on the bed as
+    exported: rear rim of the display ring at z = 0, nothing below it."""
+    assert (PARTS / f"{HOLDER}.scad").exists()
+    report = inspect_stl(PARTS / f"{HOLDER}{suffix}.stl")
+    assert report.is_printable
+    assert report.min_mm[2] == pytest.approx(0.0, abs=0.01)
+    assert max(report.size_mm) < 120, "should fit a small printer's bed"
+
+
+def test_xiao_holder_fit_piece_is_just_the_display_ring():
+    ring = inspect_stl(PARTS / f"{HOLDER}_fit_test.stl")
+    holder = inspect_stl(PARTS / f"{HOLDER}.stl")
+    # 43.1 mm board + 0.3 mm clearance + 4.0 mm wall, each side
+    assert ring.size_mm[1] == pytest.approx(51.7, abs=0.05)
+    assert ring.size_mm[2] == pytest.approx(6.2, abs=0.05)
+    assert ring.volume_cm3 < holder.volume_cm3 / 4
+
+
+def test_xiao_holder_tilt_variants_differ():
+    """near / default / far aim at 90 / 120 / 180 mm, so the hub sits at a
+    different angle to the ring in each."""
+    volumes = {suffix: inspect_stl(PARTS / f"{HOLDER}{suffix}.stl").volume_cm3
+               for suffix in ("_near", "", "_far")}
+    assert volumes["_near"] > volumes[""] > volumes["_far"]
