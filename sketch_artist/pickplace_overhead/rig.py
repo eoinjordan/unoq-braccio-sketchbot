@@ -183,6 +183,7 @@ class RigConfig:
     arm_mask_px: int = 130
     min_intruder_px: int = 1500
     check_arm: bool = True
+    check_sheet: bool = True
 
 
 @dataclass
@@ -240,7 +241,7 @@ class Rig:
         # of the reference frame. Anywhere else the arm, its shadow and the
         # servo leads cross the sheet and the outline says nothing.
         same_pose = max(abs(a - b) for a, b in zip(pose[:4], self.reference_pose[:4])) < 0.6
-        if same_pose:
+        if same_pose and self.cfg.check_sheet:
             shift = watch.base_shift(self.reference, frame, centre, self.cfg.sheet_radius_px)
             if shift.moved:
                 raise Halt("base sheet outline changed after '%s' (%d px, %.0f%% of the sheet)"
