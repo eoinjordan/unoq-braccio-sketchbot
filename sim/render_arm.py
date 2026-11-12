@@ -11,8 +11,10 @@ figure in the README.
     python -m sim.render_arm --image examples/sample_face_eoin.png \
         --style none --out docs/images/gazebo_caricature.png
 
-The STL meshes live in the sibling ``unoq-braccio`` repo (GPL-3.0, not vendored
-here); point --meshes at them if they are not in the default location.
+The STL meshes are GPL-3.0. By default they are read from the sibling
+``unoq-braccio`` repo; the same files are in ``hardware/braccio-arm``, so
+``--meshes hardware/braccio-arm`` works without it. A render derives from the
+meshes: write it to ``output/`` rather than among the MIT-licensed images.
 """
 
 from __future__ import annotations
