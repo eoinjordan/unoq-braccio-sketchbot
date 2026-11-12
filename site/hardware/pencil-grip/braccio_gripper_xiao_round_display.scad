@@ -161,8 +161,8 @@ tie_slot_angles = [52, 64];
 vent_angles = [76, 86, 96, 106];
 
 // ------------------------------------------------- height and setback
-camera_height = 29;         // optical axis above the centre line at the screen
-face_z = 29;                // screen face, along the gripper from the roll frame
+camera_height = 30.5;       // optical axis above the centre line at the screen
+face_z = 33;                // screen face, along the gripper from the roll frame
 
 // ------------------------------------------------------------------ derived
 function pocket_r() = display_pcb_d / 2 + board_fit;
@@ -492,6 +492,8 @@ echo(str("gripper_camera {",
                        window_r + cover_wall, cover_out_w() - lens_w()],
     ", \"fov_deg\": ", camera_fov_deg,
     ", \"ties\": ", ties(),
+    ", \"origin\": ", holder_origin(),
+    ", \"bed_w\": ", bed_w,
     ", \"tie_tunnel\": ", [tie_tunnel_width, tie_tunnel_thick],
     ", \"block\": ", [block_centre_x, block_half_width, block_ref_z,
                       block_taper, block_top_y, block_thickness, jaw_fit + jaw],

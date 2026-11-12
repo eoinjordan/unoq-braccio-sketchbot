@@ -30,9 +30,12 @@ forward and stop it twisting; the tie or the screws stop it sliding back.
                from one side edge inwards, so the servo body, its ears, its
                horn and its lead all sit in the open and the lead leaves
                through the open end.
-  cable tie    One tunnel, 4.4 x 2.0 mm, for a 2.5 mm or a 3.6 mm tie, in the
+  cable tie    One tunnel, 5.0 x 2.6 mm, for a 2.5 mm or a 3.6 mm tie, in the
                strip of pad between the servo slot and the finger pivots. The
-               tie goes round the block there and never crosses the servo. A
+               tie goes round the block there and never crosses the servo.
+               It runs straight through from one side face of the pad to the
+               other, has at least 1.2 mm of material all round, and flares at
+               both mouths. tests/test_tie_tunnels.py fails if it is blocked. A
                second tunnel appears behind the slot when servo_from_pivots
                leaves room for one.
   screws       two slots through the pad for M3 screws. NO REFERENCE THIS PART
@@ -69,7 +72,9 @@ block_top_y = -1.5;         // [mesh] the face the saddle sits on
 block_thickness = 4.5;      // [mesh] plate y -6.0..-1.5. MEASURE: the real block is thicker
 block_centre_x = -0.4;      // [mesh]
 block_ref_z = 3.1;          // [mesh] where block_half_width is measured
-block_half_width = 20.8;    // [mesh] MEASURE: half the width of the face at block_ref_z
+// From a test fit on the owner's gripper: the first print, at the mesh's
+// 20.8, was about 2 mm too narrow each side. Still MEASURE on your own.
+block_half_width = 22.8;    // MEASURE: half the width of the face at block_ref_z
 block_taper = 0.612;        // [mesh] MEASURE: half width gained per mm towards the fingers
 // The finger blades swing over the face in front of this z, and stand this
 // far above the centre line. The pad bridges over them from there on.
@@ -84,25 +89,30 @@ finger_space_y = 2.2;       // [mesh] blade top at y = 0.7; 1.5 mm margin
 servo_slot_length = 42.0;   // MEASURE: across the gripper, from the open edge inwards. 31.3 body + ears and margin
 servo_slot_width = 21.0;    // MEASURE: along the gripper. 16.5 body + 4.5 margin
 servo_stand_height = 30.0;  // MEASURE: how far the servo stands above the face. Nothing is built over the slot below this
-servo_from_pivots = 17.5;   // MEASURE: finger pivots back to the middle of the slot. The mesh's hole is 15.0
-servo_side = 1;             // [1:slot open towards +x, -1:towards -x]
+servo_from_pivots = 18.0;   // MEASURE: finger pivots back to the middle of the slot. The mesh's hole is 15.0
+// Which edge the slot is open to. Seen from behind the gripper, looking along
+// the fingers with the camera on top: -1 is the right-hand edge, 1 the left.
+// The test fit on the owner's gripper put the servo on the right.
+servo_side = -1;            // [-1:right-hand edge, 1:left-hand edge]
 
 // ------------------------------------------------- the saddle
-pad_thick = 7.5;            // thick enough to bridge over the finger bases
+pad_thick = 9.0;            // bridges over the finger bases, with the tie tunnel in the bridge
 pad_z0 = 4.0;               // rear end of the pad; the front end is the bed
 jaw = 3.0;                  // jaw thickness
 jaw_fit = 0.4;              // clearance each side of the block
 jaw_depth = 4.0;            // how far the jaws reach down the block's edges
-tie_tunnel_width = 4.4;     // passes a tie up to 3.6 mm wide
-tie_tunnel_thick = 2.0;     // ... and 1.4 mm thick
-tie_front_z = 26.0;         // the tie between the servo slot and the pivots
-tie_front_y = 2.9;          // its tunnel is in the bridge, over the finger bases
+tie_tunnel_width = 5.0;     // a 3.6 mm tie with 0.7 mm each side
+tie_tunnel_thick = 2.6;     // ... and 1.4 mm thick, with 0.6 mm above and below
+tie_mouth = 1.5;            // how far each mouth of a tunnel flares, to feed a tie in
+tie_front_z = 25.8;         // the tie between the servo slot and the pivots
+tie_front_y = 3.4;          // its tunnel is in the bridge: 1.2 mm of floor over the finger space
 tie_rear_y = 0.0;
+tie_wall_min = 1.2;         // least material round a tunnel: three 0.4 mm lines
 // Screw slots. Placeholders until the block has been measured (see above).
 screw_d = 3.4;              // M3 clearance
 screw_slot = 6.0;           // slot length, along the gripper
 screw_spacing = 9.0;        // between the two slots
-screw_centre_x = -17.5;     // midpoint of the pair
+screw_centre_x = -17.5 * servo_side;    // midpoint of the pair, on the side away from the servo
 screw_z = 13.0;
 
 // ------------------------------------------------- set by each holder
@@ -190,10 +200,25 @@ module saddle_cuts() {
                    block_top_y - 50, servo_z0()])
             cube([servo_slot_length + 100, 50 + servo_stand_height,
                   servo_slot_width]);
-    // cable tie tunnels
-    for (t = ties())
+    // Cable tie tunnels: straight through from one side face to the other,
+    // with a flared mouth at each end.
+    for (t = ties()) {
         translate([-100, t[1], t[0] - tie_tunnel_width / 2])
             cube([200, tie_tunnel_thick, tie_tunnel_width]);
+        for (sx = [-1, 1]) {
+            edge = block_centre_x
+                   + sx * (block_half(t[0]) + jaw_fit + jaw);
+            hull() {
+                translate([edge - sx * 4 - 0.05, t[1] + 0.1,
+                           t[0] - tie_tunnel_width / 2 + 0.1])
+                    cube([0.1, tie_tunnel_thick - 0.2, tie_tunnel_width - 0.2]);
+                translate([edge + sx * 2 - 0.05, t[1] - tie_mouth,
+                           t[0] - tie_tunnel_width / 2 - tie_mouth])
+                    cube([0.1, tie_tunnel_thick + 2 * tie_mouth,
+                          tie_tunnel_width + 2 * tie_mouth]);
+            }
+        }
+    }
     // screw slots
     for (sx = [-1, 1])
         translate([screw_centre_x + sx * screw_spacing / 2, block_top_y - 1,
@@ -224,5 +249,15 @@ module pad_strip(x0, x1, z0) {
     }
 }
 
+// Where the pad ends, at height y: the print bed cuts it off.
+function pad_front_z(y) =
+    face_z + (bed_w + (y - camera_height) * sin(tilt_deg())) / cos(tilt_deg());
+
 assert(tie_front_z - tie_tunnel_width / 2 >= servo_z1() + 0.6,
        "the front tie would cross the servo slot; move servo_from_pivots or tie_front_z");
+assert(tie_front_y - finger_space_y >= tie_wall_min - 0.001,
+       "the floor of the tie tunnel is too thin to print");
+assert(pad_top_y() - tie_front_y - tie_tunnel_thick >= tie_wall_min - 0.001,
+       "the roof of the tie tunnel is too thin to print; thicken the pad");
+assert(pad_front_z(tie_front_y) - tie_front_z - tie_tunnel_width / 2 >= 1.0,
+       "the tie tunnel breaks out of the front of the pad; raise face_z");

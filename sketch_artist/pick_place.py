@@ -70,9 +70,9 @@ DEFAULTS = {
         "wrist_rotation_deg": 0.0,
     },
     "camera": {
-        "tilt_deg": 13.3,
-        "height_mm": 22.8,
-        "lens_from_mount_mm": 23.1,
+        "tilt_deg": 14.6,
+        "height_mm": 23.7,
+        "lens_from_mount_mm": 29.0,
         "fov_diagonal_deg": 66.0,
         "aspect": [4, 3],
         "image_rotation_deg": 0.0,

@@ -43,13 +43,13 @@ tool:
 
 camera:
   # From hardware/pencil-grip/README.md, for the holder you printed:
-  #   XIAO round display  near 17.3 / 21.0 / 22.6   default 13.3 / 22.8 / 23.1
-  #                       far   9.0 / 24.8 / 23.5
-  #   ESP-EYE             near 11.3 / 16.5 /  7.1   default  8.6 / 17.0 /  7.2
-  #                       far   5.8 / 17.5 /  7.2
-  tilt_deg: 13.3              # optical axis towards the centre line
-  height_mm: 22.8             # lens above the gripper centre line
-  lens_from_mount_mm: 23.1    # lens in front of the finger mounting face
+  #   XIAO round display  near 19.3 / 21.6 / 28.3   default 14.6 / 23.7 / 29.0
+  #                       far   9.8 / 25.9 / 29.5
+  #   ESP-EYE             near 12.4 / 17.8 /  9.1   default  9.4 / 18.3 /  9.2
+  #                       far   6.3 / 18.9 /  9.2
+  tilt_deg: 14.6              # optical axis towards the centre line
+  height_mm: 23.7             # lens above the gripper centre line
+  lens_from_mount_mm: 29.0    # lens in front of the finger mounting face
   # Diagonal field of view and picture shape. 66 is an estimate for the
   # OV2640. MEASURE.
   fov_diagonal_deg: 66.0

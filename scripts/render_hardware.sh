@@ -78,5 +78,8 @@ echo "Converting to binary STL, writing OBJ copies, validating every part"
     "$parts/braccio_pencil_grip_10mm.stl"
 "$python" "$here/scripts/mesh_check.py" "$parts"/*.stl
 
+echo "Recording where each tie tunnel is and checking a tie passes through"
+"$python" "$here/scripts/check_tie_tunnels.py" --write
+
 echo "Copying the parts to the setup site and rewriting its parts page"
 "$python" "$here/scripts/build_parts_page.py"

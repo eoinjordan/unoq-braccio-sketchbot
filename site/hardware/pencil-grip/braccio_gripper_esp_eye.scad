@@ -89,7 +89,7 @@ usb_relief = 13.0;          // gap in the frame at the USB end
 button_relief = 6.0;
 
 // ------------------------------------------------- height and setback
-camera_height = 18.5;       // optical axis above the centre line at the frame
+camera_height = 20.0;       // optical axis above the centre line at the frame
 face_z = 29;                // back of the frame, along the gripper
 
 // ------------------------------------------------------------------ derived
@@ -258,6 +258,8 @@ echo(str("gripper_camera {",
     ", \"lens\": ", holder_origin() + lens_w() * optical_dir(),
     ", \"fov_deg\": ", camera_fov_deg,
     ", \"ties\": ", ties(),
+    ", \"origin\": ", holder_origin(),
+    ", \"bed_w\": ", bed_w,
     ", \"tie_tunnel\": ", [tie_tunnel_width, tie_tunnel_thick],
     ", \"block\": ", [block_centre_x, block_half_width, block_ref_z,
                       block_taper, block_top_y, block_thickness, jaw_fit + jaw],
