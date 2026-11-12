@@ -27,7 +27,7 @@ import socketserver
 import threading
 import time
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple
+from typing import Callable, List, Optional, Sequence, Tuple
 
 from . import config as cfg
 from .fk import BraccioForwardKinematics, PenTip
@@ -55,6 +55,9 @@ class SketchbotSimulator:
         self._current: Polyline = []
         self.last_angles: Optional[Tuple[float, ...]] = None
         self.move_count = 0
+        # Called with the six servo angles after every move, outside the
+        # lock. The simulated gripper camera (sim_camera.py) listens here.
+        self.listeners: List[Callable[[Tuple[float, ...]], None]] = []
 
     def apply_move(self, angles: Sequence[int]) -> PenTip:
         """Apply one servo-angle command and update the pen trajectory."""
@@ -70,7 +73,9 @@ class SketchbotSimulator:
                 self._current.append((tip.x_mm, tip.y_mm))
             else:
                 self._flush()
-            return tip
+        for listener in self.listeners:
+            listener(servo)
+        return tip
 
     def _flush(self) -> None:
         if len(self._current) >= 2:

@@ -80,6 +80,7 @@
         <tbody>
           <tr><td>ESP-EYE to the Studio</td><td>Written: <a href="https://github.com/eoinjordan/unoq-braccio-sketchbot/tree/main/firmware/esp_eye_camera">firmware/esp_eye_camera</a> serves snapshots and MJPEG over HTTP, or frames over USB serial.</td></tr>
           <tr><td>Camera picture and a result on the round display</td><td>Written, in a separate repository: <a href="https://github.com/eoinjordan/executorch-zephyr-xiao-esp32s3">executorch-zephyr-xiao-esp32s3</a>. Zephyr firmware for the XIAO and round display that shows the camera crop, the digit an MNIST model reads from it and the inference time. It does not talk to the Studio.</td></tr>
+          <tr><td>Colour pick and place from the XIAO's detections</td><td>Written, simulated only: <a href="https://github.com/eoinjordan/unoq-braccio-sketchbot/blob/main/docs/pick-place.md">docs/pick-place.md</a>. <code>python -m sketch_artist.pick_place_cli</code> reads one <code>DET</code> line per frame from the XIAO over USB, finds bricks by colour, picks them and drops them in a parts bin, with no depth sensor. Dry-run unless <code>--live</code> is given. It has not been run on a real arm, and the detector firmware for the XIAO is separate.</td></tr>
           <tr><td>Streaming the XIAO camera to the Studio</td><td>Not written.</td></tr>
           <tr><td>Showing pick-and-place detections on the round display while streaming</td><td>Not written.</td></tr>
         </tbody>

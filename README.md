@@ -171,6 +171,16 @@ in [executorch-zephyr-xiao-esp32s3](https://github.com/eoinjordan/executorch-zep
 and it does not talk to the Studio. Streaming the XIAO camera to the Studio:
 not written. Showing detections on the screen while streaming: not written.
 
+**Colour pick and place.** With the XIAO on top of the gripper running a
+detector that prints one `DET` line per frame over USB, the arm can search for
+2x4 bricks of chosen colours, pick each one and drop it in a parts bin, with
+no depth sensor: `python -m sketch_artist.pick_place_cli`. It is dry-run
+unless `--live` is given, and `--source sim` runs the whole loop on the
+software arm with a simulated camera. Simulated only so far: it has not been
+run on a real arm, and the detector firmware is separate. Wiring, the
+calibration the owner has to do, how to run it and its limits are in
+[docs/pick-place.md](docs/pick-place.md).
+
 The pencil is held by a printed part that clamps the tool with an M3 screw.
 Print `hardware/pencil-grip/braccio_pen_finger_8mm.stl` to keep the claws
 working alongside the pen, or `braccio_pencil_grip_8mm.stl` for the more rigid
@@ -463,7 +473,9 @@ The suite covers config/geometry sanity (including a guard that the whole paper
 is reachable), the IK ↔ FK round trip, the planner, vectorizer, scenes,
 preview/gallery, the `M`/`S` protocol over a real socket, a full end-to-end
 pipeline run against the simulator, and the printable STLs in `hardware/`
-(closed, manifold, single-shell, and consistent with `workspace.yaml`).
+(closed, manifold, single-shell, and consistent with `workspace.yaml`). The
+colour pick-and-place loop runs closed-loop against a simulated gripper camera,
+with noise and lost frames, over randomised layouts.
 
 ## Configuration
 
@@ -473,6 +485,7 @@ pipeline run against the simulator, and the printable STLs in `hardware/`
 | `config/workspace.yaml` | Braccio link lengths, paper placement, pen heights, servo resolution |
 | `config/drawing.yaml`   | Line-art model, edge/contour parameters, stroke simplification and cap |
 | `config/branding.yaml`  | Edge Impulse colours, tagline, logo/QR paths, paper layout    |
+| `config/pick_place.yaml` | Colour pick and place: colours, thresholds, heights, claw widths, camera holder, bin |
 
 ## Calibrating the pen (web UI)
 
@@ -602,7 +615,7 @@ site/              Setup site on GitHub Pages; parts.html lists every part
 sim/               Headless arm renderer + Gazebo M/S bridge (real model)
 scripts/           Camera listing, model fetch, calibration and demo runner helpers
 tests/             pytest suite (pipeline, kinematics, sim, end-to-end)
-docs/              Architecture, calibration and safety notes
+docs/              Architecture, calibration, pick-and-place and safety notes
 examples/          A sample face image for dry runs
 ```
 

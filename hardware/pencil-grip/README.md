@@ -275,6 +275,12 @@ MNIST digit and the inference time on the screen is in
 talk to the Studio. Streaming the XIAO camera to the Studio: not written.
 Showing detections on the round display while streaming: not written.
 
+Colour pick and place with a holder's camera reads one `DET` line per frame
+from the XIAO over USB serial; the detector firmware is separate. The
+controller takes the tilt, the lens height and the lens position from the
+table above (`camera` in `config/pick_place.yaml`). Simulated only so far:
+see [docs/pick-place.md](../../docs/pick-place.md).
+
 ## Files
 
 | File                                | Purpose                                      |

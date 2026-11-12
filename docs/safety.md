@@ -62,4 +62,30 @@ enabling motion.
   calibration server bypass the studio's session interlock; never run them at
   the same time.
 
+## Colour pick and place
+
+`sketch_artist.pick_place_cli` runs unattended once started, which the Studio
+never does. It has been run in simulation only. See [pick-place.md](pick-place.md).
+
+- It is dry-run unless `--live` is given. First run, in this order: dry-run and
+  read the plan; `--live --slow` with the servo power off; `--live --slow` with
+  the power on, one brick, a hand on the power switch and nobody within reach.
+- Every move is planned and checked before its first step is sent: strict
+  inverse kinematics, the joint limits used by the Studio, steps no larger than
+  `motion.max_step_deg`, and a floor that keeps the claw tips `desk.margin_mm`
+  above the desk. A move that fails any check is refused whole.
+- That floor is a floor in the model. If `desk.z_mm`, the gripper lengths or
+  the servo zeros are wrong, the claws can reach the desk. Calibrate the desk
+  height by touch before the first live descent.
+- A watchdog halts the run when the camera sends no detection line for
+  `watchdog_s` (1 s). Stop on the monitor page and Ctrl-C do the same. The arm
+  then holds its pose and the claws stay as they are, so a held brick is not
+  dropped. **None of these cuts servo power.**
+- It is an independent client: it bypasses the Studio's session interlock.
+  Never run it while a Studio session is armed or the calibration server is in
+  use.
+- There is no force sensing. A brick lying across the claws stalls the gripper
+  servo at the brick's length; lay bricks with a long side towards the base.
+- Keep the camera cable slack and clear of the claws over the whole base sweep.
+
 See [Studio operation](studio.md) and [current verification status](validation.md).
