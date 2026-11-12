@@ -1,3 +1,5 @@
 web/static/dist/** linguist-generated=true -whitespace
 site/assets/** linguist-generated=true -whitespace
 site/install.sh linguist-generated=true
+# Text-format STLs must keep their bytes, the parts page lists their sizes.
+*.stl -text
