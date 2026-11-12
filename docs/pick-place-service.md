@@ -271,6 +271,33 @@ steps, with an overhead frame and an agent status read after each.
 - At first the bricks lay in one touching cluster; with 45 mm between the open jaws
   none could be gripped without hitting a neighbour. No pick was attempted.
 
+## Fourth session: first live pick attempt, 2026-11-12 late evening
+
+The owner fixed the base to the floor and rearranged the bricks and bin.
+
+- Base check: rest-pose frames before and after the run match; the base did
+  not slide. Before it was fixed it had slid about 20 mm during one session,
+  which is why the picture turned only 0.5 to 0.75 degrees per base degree.
+  Fixed, the rate is about 1.0.
+- The sheet-outline check still fired between identical frames (camera auto
+  exposure), so it stays off; the base is compared by eye on rest-pose frames.
+- One pick attempt, on a yellow 2x2 brick about 200 mm out at base 149. The
+  claws were lowered in steps to a model height of 8 mm, the jaws closed to
+  65 and the arm lifted. Nothing was gripped: the claws came down on the near
+  side of the brick and pushed it about 8 mm outward. The top-down camera
+  cannot see the claws under the forearm at that height, and the gripper
+  camera reported the glowing USB lead as the bin, so neither could guide the
+  last few centimetres.
+- No retry: a corrected approach would have taken the camera holder closer
+  to a chair leg it had already passed within a few centimetres of.
+- `sketch_artist/pickplace_overhead/live.py` is the driver used for all of
+  this, and `config/rigs/floor-rig-2026-11-12.yaml` records the numbers.
+
+What a pick on this rig still needs: a view of the claws at the bottom of the
+descent (a second camera from the side, or the gripper camera aimed and
+calibrated with the lead out of its picture), the bricks clear of the chair,
+and the floor height found by touch.
+
 ## Incidents
 
 **1. Gripper caught the bin, base turned (2026-11-12, about 16:05).**
