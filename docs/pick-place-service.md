@@ -139,25 +139,32 @@ calibrated with the pen grip, which sits at an angle on the gripper.
 The page has a kiosk layout at `http://127.0.0.1:7110/?kiosk=1`: three
 large buttons and the state, no log.
 
-The UNO Q image runs Xorg with the LightDM greeter and has no browser
-installed, and there is no automatic login, so a full-screen page at boot
-needs three things done with sudo, once:
+The UNO Q image runs Xorg with the LightDM greeter. With the screen
+connected (checked on 2026-11-12: `card0-DP-1` connected, 800x480) it shows
+the login prompt, because nobody is logged in and there is no automatic
+login. A program started over ssh or by a user unit cannot draw on that
+screen. One step needs sudo, once: log the `arduino` user in automatically.
 
-    sudo apt install chromium
     sudo mkdir -p /etc/lightdm/lightdm.conf.d
-    printf '[Seat:*]\nautologin-user=arduino\nautologin-user-timeout=0\n' \
-      | sudo tee /etc/lightdm/lightdm.conf.d/50-autologin.conf
-    mkdir -p ~/.config/autostart
-    cp ~/sketchbot-pickplace/deploy/pickplace/pickplace-kiosk.desktop ~/.config/autostart/
+    printf '[Seat:*]
+autologin-user=arduino
+autologin-user-timeout=0
+autologin-session=xfce
+'       | sudo tee /etc/lightdm/lightdm.conf.d/50-autologin.conf
+    sudo systemctl restart lightdm
 
-`~/bin/pickplace-kiosk.sh` (installed already) exits quietly when no
-display is connected, waits for the service, and opens the first browser it
-finds full screen. The board's video output is DisplayPort over USB-C
-(`/sys/class/drm/card0-DP-1`); an HDMI screen needs a USB-C adapter or hub
-that carries DisplayPort. On 2026-11-12 that connector read `disconnected`
-with the screen lying next to the arm, so none of this was tried on the
-screen. Automatic login means anyone at the screen is logged in as
-`arduino`; that is the price of a kiosk.
+The rest is already in place for the user: `~/.config/autostart/
+pickplace-kiosk.desktop` starts `~/bin/pickplace-kiosk.sh` with the desktop
+session. The script exits quietly when no display is connected, waits for
+the service, and opens the page full screen in chromium or firefox if one is
+installed, otherwise in a small WebKitGTK viewer
+(`deploy/pickplace/pickplace-kiosk.py`); the image has WebKitGTK and its
+Python bindings, so no browser has to be installed. The viewer has not been
+seen on the screen: there was no desktop session to try it in.
+
+Automatic login means anyone at the screen is logged in as `arduino`; that
+is the price of a kiosk. To undo it, delete the `50-autologin.conf` file
+and `~/.config/autostart/pickplace-kiosk.desktop`.
 
 Power the screen from its own supply. See the second incident.
 
@@ -197,6 +204,42 @@ Not measured, and needed before live motion:
 The overhead camera was not calibrated against the arm either: the base
 was moved three times during the session, and the stretched poses the
 calibration needs are the ones that reset the board.
+
+## Second session, same day, after the power change
+
+The owner put a stronger supply on the board and confirmed the motor shield
+has its own wall supply; the camera was connected through a USB hub.
+
+- After a real power cycle the service came up by itself and reached
+  `ready` about a minute after boot.
+- The camera sends `DET` lines at about 6 per second.
+- A bent-arm reach behind the base (model: grasp point 215 mm out, 110 mm
+  up), driven one joint at a time in 2 degree steps, ran 14 moves without a
+  reset. The stretched level pose was not repeated.
+- At that pose the overhead camera shows the gripper hanging close to
+  straight down under the wrist, about 150 mm from the base axis, where the
+  model has it pitched 60 degrees outward with the grasp point at 215 mm.
+  That contradicts the level-frame reading in the table above (in line at
+  wrist servo 90). One of the two readings is wrong, and both were made by
+  eye from an uncalibrated, oblique camera. **The tool length and the wrist
+  zero are therefore not established.** They need a ruler and a set square
+  on the arm: forearm level, step the wrist until the claws continue the
+  forearm's line, note the servo angle (`arm.wrist_zero_deg`, mirrored to
+  the forward frame: 180 minus the servo angle when reaching behind), and
+  measure wrist axis to claw tips.
+- At that pose the gripper camera reported nothing for most frames and a
+  few `white` detections at the bottom edge of the picture, which is where
+  its own white fingers are. It did not report the yellow 2x4 brick that
+  lay about 80 mm beyond the gripper. Whether that is the camera's aim,
+  the picture rotation or the detector is not known.
+- The camera's lit USB lead drapes over the forearm and elbow and off to
+  one side. It moved with every joint and did not snag in this reach; it
+  crosses the elbow joint and will need routing before a full sweep.
+- The base heading was about 12 degrees off where the overhead estimate put
+  it, toward a chair leg. The search sweep must be limited by measurement
+  on the day, not from this file.
+
+No pick was attempted. Live mode was not enabled.
 
 ## Incidents
 
