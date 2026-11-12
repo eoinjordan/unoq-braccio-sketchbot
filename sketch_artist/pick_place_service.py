@@ -160,6 +160,10 @@ class PickPlaceService:
             return
         problems = self.check()
         with self._lock:
+            # The check takes seconds (listing serial ports is slow). A Start
+            # pressed meanwhile has already set the state; leave it alone.
+            if self.busy() or self.state in (RUNNING, PARKING):
+                return
             self.problems = problems
             ended = self.state in (DONE, STOPPED, FAULT)
             if problems:
@@ -183,6 +187,7 @@ class PickPlaceService:
                 self.problems = problems
                 return {"ok": False, "error": "; ".join(problems)}
             self.state = RUNNING
+            self.controller = None
             self.sessions += 1
             self._worker = threading.Thread(target=self._session, name="pickplace-session",
                                             daemon=True)
@@ -276,6 +281,8 @@ class PickPlaceService:
         with self._lock:
             state, problems = self.state, list(self.problems)
             history = list(self.history[-40:])
+        if self.busy() and state != PARKING:
+            state = RUNNING
         if controller is not None and state in (RUNNING, DONE, STOPPED, FAULT):
             snap = controller.snapshot()
             snap["log"] = (snap.get("log") or [])[-30:] + history[-10:]

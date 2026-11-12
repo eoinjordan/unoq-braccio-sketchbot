@@ -234,3 +234,26 @@ def test_http_page_state_and_actions(agent, tmp_path):
 def test_live_needs_the_explicit_flag(capsys):
     assert svc.main(["--live", "--http-port", "0"]) == 2
     assert "calibrated" in capsys.readouterr().err
+
+
+def test_a_slow_check_does_not_overwrite_a_running_session(agent, tmp_path, monkeypatch):
+    port = tmp_path / "ttyCam"
+    port.write_text("")
+    monkeypatch.setattr(svc, "SerialDetectionSource", EmptyDesk)
+    service = svc.PickPlaceService(agent.host, agent.port, camera_port=str(port))
+    service.refresh()
+    real_check = service.check
+
+    def check_then_start():
+        problems = real_check()
+        if service.sessions == 0:
+            service.check = real_check
+            assert service.start()["ok"]            # Start lands while the check is in flight
+        return problems
+
+    service.check = check_then_start
+    service.refresh()
+    assert service.sessions == 1
+    assert service.snapshot()["state"] not in ("ready", "waiting")
+    assert service.snapshot()["service"]["state"] in ("running", "done")
+    assert wait_until(lambda: not service.busy())
