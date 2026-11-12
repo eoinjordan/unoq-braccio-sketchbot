@@ -262,7 +262,13 @@ steps, with an overhead frame and an agent status read after each.
   calibration is not accurate enough to pick blind. Picking there needs the
   overhead camera calibrated against the arm, or steering by eye at low
   height.
-- The bricks lay in one touching cluster; with 45 mm between the open jaws
+- The bricks are standard LEGO, not DUPLO: a 2x4 is about 67 px long in
+  the overhead picture, about 2.1 px/mm at the floor. Earlier distances in
+  this file were worked out at 1.3 px/mm and are about 40 percent too long.
+- A stiff black wire, about 150 mm, sticks out of the arm near the gripper
+  camera and swings over the floor when the base turns. It has to be folded
+  along the arm or removed before any descent.
+- At first the bricks lay in one touching cluster; with 45 mm between the open jaws
   none could be gripped without hitting a neighbour. No pick was attempted.
 
 ## Incidents
