@@ -124,3 +124,49 @@ def test_gripper_camera_tilt_variants_differ(holder):
     heights = [inspect_stl(PARTS / f"{holder}{suffix}.stl").size_mm[2]
                for suffix in ("_near", "", "_far")]
     assert heights[0] < heights[1] < heights[2]
+
+
+XIAO_HOLDER = "braccio_gripper_xiao_round_display"
+
+
+@pytest.mark.parametrize("suffix", ["_cover", "_near_cover", "_far_cover",
+                                    "_cover_fit_test"])
+def test_round_display_cover_is_exported_ready_to_print(suffix):
+    """One cover per aim distance (its flat underside follows the tilt), and
+    a fit piece of the rim and snap arms. All print face down, no supports."""
+    report = inspect_stl(PARTS / f"{XIAO_HOLDER}{suffix}.stl")
+    assert report.is_printable
+    assert report.min_mm[2] == pytest.approx(0.0, abs=0.01)
+    assert max(report.size_mm) < 60
+
+
+def test_round_display_cover_matches_the_ring_it_clips_to():
+    cover = inspect_stl(PARTS / f"{XIAO_HOLDER}_cover.stl")
+    ring = inspect_stl(PARTS / f"{XIAO_HOLDER}_fit_test.stl")
+    # the cup is the ring's diameter; the snap arms stand 1.7 mm outside it
+    assert max(cover.size_mm[0], cover.size_mm[1]) < ring.size_mm[1] + 4.5
+    assert min(cover.size_mm[0], cover.size_mm[1]) > ring.size_mm[1] - 1.0
+    piece = inspect_stl(PARTS / f"{XIAO_HOLDER}_cover_fit_test.stl")
+    assert piece.size_mm[2] < cover.size_mm[2]
+    assert piece.volume_cm3 < cover.volume_cm3
+
+
+def test_saddle_fit_piece_is_the_saddle_alone():
+    assert (PARTS / "braccio_gripper_saddle_fit_test.scad").exists()
+    saddle = inspect_stl(PARTS / "braccio_gripper_saddle_fit_test.stl")
+    assert saddle.is_printable
+    assert saddle.min_mm[2] == pytest.approx(0.0, abs=0.01)
+    for holder in GRIPPER_CAMERAS:
+        assert saddle.volume_cm3 < inspect_stl(PARTS / f"{holder}.stl").volume_cm3
+
+
+def test_saddle_leaves_the_gripper_servo_to_the_owner():
+    """The servo is in no reference, so the slot and the block are parameters
+    the source tells the owner to measure, not numbers presented as fact."""
+    source = (PARTS / "braccio_gripper_camera_lib.scad").read_text(encoding="utf-8")
+    for name in ("servo_slot_length", "servo_slot_width", "servo_stand_height",
+                 "servo_from_pivots", "block_half_width", "block_taper",
+                 "block_thickness"):
+        line = next(l for l in source.splitlines() if l.startswith(f"{name} ="))
+        assert "MEASURE" in line, f"{name} is not marked for measuring"
+    assert "servo_clear" not in source

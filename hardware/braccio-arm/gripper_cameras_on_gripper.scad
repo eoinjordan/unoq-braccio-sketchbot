@@ -20,6 +20,7 @@ use <../pencil-grip/braccio_gripper_esp_eye.scad>
 
 which = "xiao_round_display";   // [xiao_round_display, esp_eye]
 grip = 0.9;                 // gripper joint, radians: 0.175 open, 1.274 closed
+cover = true;               // the round display holder's cover, fitted or not
 
 module wrist_and_gripper() {
     // wrist_pitch_link, seen from wrist_roll_link at zero roll
@@ -41,5 +42,5 @@ module wrist_and_gripper() {
 rotate([90, 0, 0]) {
     wrist_and_gripper();
     if (which == "esp_eye") esp_eye_on_gripper();
-    else xiao_on_gripper();
+    else xiao_on_gripper(cover);
 }

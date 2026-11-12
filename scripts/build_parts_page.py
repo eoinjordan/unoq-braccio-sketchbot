@@ -53,6 +53,16 @@ PENCIL_GRIP = [
     (f"{XIAO}_far.stl", "The same holder aimed 180 mm in front", f"{XIAO}.scad"),
     (f"{XIAO}_fit_test.stl", "Fit piece: the display ring and latches only",
      f"{XIAO}.scad"),
+    (f"{XIAO}_cover.stl", "Snap-on SKETCHBOT cover with battery pocket, for "
+     "the default holder", f"{XIAO}.scad"),
+    (f"{XIAO}_near_cover.stl", "The same cover for the near holder",
+     f"{XIAO}.scad"),
+    (f"{XIAO}_far_cover.stl", "The same cover for the far holder",
+     f"{XIAO}.scad"),
+    (f"{XIAO}_cover_fit_test.stl", "Fit piece: the cover's rim and snap arms",
+     f"{XIAO}.scad"),
+    ("braccio_gripper_saddle_fit_test.stl", "Fit piece: the gripper saddle "
+     "alone, no camera", "braccio_gripper_saddle_fit_test.scad"),
     (f"{EYE}.stl", "Gripper-top holder for the ESP-EYE, aimed 120 mm in front "
      "of the finger mount", f"{EYE}.scad"),
     (f"{EYE}_near.stl", "The same holder aimed 90 mm in front", f"{EYE}.scad"),
@@ -175,18 +185,20 @@ def render():
       <div class="parts-figure">
         <figure><img src="{arm}/gripper_xiao_round_display_side.png" width="1400" height="1050" alt="XIAO round display holder on the gripper model, seen from the side: the ring stands on the gripper block and the camera looks forward and down along the fingers"><figcaption>XIAO ESP32S3 Sense on the Round Display, from the side.</figcaption></figure>
         <figure><img src="{arm}/gripper_xiao_round_display_audience.png" width="1400" height="1050" alt="The same holder seen from behind: the round screen faces back up the arm"><figcaption>The same, from behind: the screen faces the audience.</figcaption></figure>
+        <figure><img src="{arm}/gripper_xiao_round_display_front.png" width="1400" height="1050" alt="The round display holder from the front, with its cover on: SKETCHBOT across the face above the lens window"><figcaption>The cover, from the front.</figcaption></figure>
+        <figure><img src="{grip}/{XIAO}_cover_preview.png" width="1400" height="1050" alt="The cover alone, showing the recessed SKETCHBOT lettering, the lens window and two of the snap arms"><figcaption>The cover alone.</figcaption></figure>
         <figure><img src="{arm}/gripper_esp_eye_side.png" width="1400" height="1050" alt="ESP-EYE holder on the gripper model, seen from the side: the board stands upright on the gripper block with the lens looking forward"><figcaption>ESP-EYE, from the side.</figcaption></figure>
         <figure><img src="{arm}/gripper_esp_eye_audience.png" width="1400" height="1050" alt="The ESP-EYE holder seen from behind, with the USB plug leaving upwards"><figcaption>ESP-EYE, from behind.</figcaption></figure>
       </div>
       <div class="parts-scroll"><table class="parts-table">
         <thead><tr><th>Holder</th><th>Aimed in front of the finger mount</th><th>Tilt</th><th>Lens above the gripper centre line</th><th>Closed claws cover</th></tr></thead>
         <tbody>
-          <tr><td>{link("pencil-grip", XIAO + "_near.stl")}</td><td>90 mm</td><td>17.3 deg</td><td>21.0 mm</td><td>20 percent of the picture</td></tr>
-          <tr><td>{link("pencil-grip", XIAO + ".stl")}</td><td>120 mm</td><td>13.3 deg</td><td>22.8 mm</td><td>13 percent</td></tr>
-          <tr><td>{link("pencil-grip", XIAO + "_far.stl")}</td><td>180 mm</td><td>9.0 deg</td><td>24.8 mm</td><td>8 percent</td></tr>
-          <tr><td>{link("pencil-grip", EYE + "_near.stl")}</td><td>90 mm</td><td>11.3 deg</td><td>16.5 mm</td><td>29 percent</td></tr>
-          <tr><td>{link("pencil-grip", EYE + ".stl")}</td><td>120 mm</td><td>8.6 deg</td><td>17.0 mm</td><td>23 percent</td></tr>
-          <tr><td>{link("pencil-grip", EYE + "_far.stl")}</td><td>180 mm</td><td>5.8 deg</td><td>17.5 mm</td><td>15 percent</td></tr>
+          <tr><td>{link("pencil-grip", XIAO + "_near.stl")}</td><td>90 mm</td><td>17.7 deg</td><td>20.8 mm</td><td>20 percent of the picture</td></tr>
+          <tr><td>{link("pencil-grip", XIAO + ".stl")}</td><td>120 mm</td><td>13.5 deg</td><td>22.7 mm</td><td>13 percent</td></tr>
+          <tr><td>{link("pencil-grip", XIAO + "_far.stl")}</td><td>180 mm</td><td>9.1 deg</td><td>24.8 mm</td><td>8 percent</td></tr>
+          <tr><td>{link("pencil-grip", EYE + "_near.stl")}</td><td>90 mm</td><td>11.5 deg</td><td>16.4 mm</td><td>29 percent</td></tr>
+          <tr><td>{link("pencil-grip", EYE + ".stl")}</td><td>120 mm</td><td>8.7 deg</td><td>16.9 mm</td><td>21 percent</td></tr>
+          <tr><td>{link("pencil-grip", EYE + "_far.stl")}</td><td>180 mm</td><td>5.8 deg</td><td>17.5 mm</td><td>14 percent</td></tr>
         </tbody>
       </table></div>
       <p>The claw tips are 61.4 mm in front of the finger mount, so the default aims 59 mm past them. Open and half-open claws are outside the picture; the cover figures are for claws fully closed, measured on the model's flat 101 mm blades with a 66 degree lens.</p>
@@ -194,18 +206,26 @@ def render():
         <div>
           <h3>Downloads</h3>
           <ul>
-            <li>Fit pieces, to print first: {link("pencil-grip", XIAO + "_fit_test.stl")} (the display ring) and {link("pencil-grip", EYE + "_fit_test.stl")} (the ESP-EYE frame).</li>
-            <li>Sources: {link("pencil-grip", XIAO + ".scad")}, {link("pencil-grip", EYE + ".scad")} and the saddle they share, {link("pencil-grip", "braccio_gripper_camera_lib.scad")}. Every dimension is a named value with where it came from.</li>
-            <li>Pictures: {link("pencil-grip", XIAO + "_preview.png")}, {link("pencil-grip", EYE + "_preview.png")}, and the four above.</li>
+            <li>Fit pieces, to print first: {link("pencil-grip", "braccio_gripper_saddle_fit_test.stl")} (the saddle alone, to try on the gripper), {link("pencil-grip", XIAO + "_fit_test.stl")} (the display ring), {link("pencil-grip", XIAO + "_cover_fit_test.stl")} (the cover's snap arms) and {link("pencil-grip", EYE + "_fit_test.stl")} (the ESP-EYE frame).</li>
+            <li>Cover for the round display holder, one per aim distance: {link("pencil-grip", XIAO + "_near_cover.stl")}, {link("pencil-grip", XIAO + "_cover.stl")}, {link("pencil-grip", XIAO + "_far_cover.stl")}. It snaps over the ring with four arms, encloses the XIAO, the camera board and a small LiPo, and has SKETCHBOT recessed 0.6 mm in its face, 5.5 mm high. The battery pocket defaults to a 402030 cell (4.0 x 20 x 30 mm): measure yours and set <code>battery_t</code>, <code>battery_w</code> and <code>battery_l</code>. The ESP-EYE holder has no cover.</li>
+            <li>Sources: {link("pencil-grip", XIAO + ".scad")}, {link("pencil-grip", EYE + ".scad")}, {link("pencil-grip", "braccio_gripper_saddle_fit_test.scad")} and the saddle they share, {link("pencil-grip", "braccio_gripper_camera_lib.scad")}. Every dimension is a named value with where it came from.</li>
+            <li>Pictures: {link("pencil-grip", XIAO + "_preview.png")}, {link("pencil-grip", XIAO + "_cover_preview.png")}, {link("pencil-grip", EYE + "_preview.png")}, and the ones above.</li>
           </ul>
           <h3>Parts list</h3>
           <ul>
             <li>Either a Seeed Studio Round Display for XIAO with a XIAO ESP32S3 Sense on soldered pin headers, or an Espressif ESP-EYE v2.1.</li>
-            <li>To fix it: 1 or 2 cable ties, 2.5 mm or 3.6 mm wide and at least 200 mm long, or 2 x M3 screws.</li>
+            <li>To fix it: 1 cable tie, 2.5 mm or 3.6 mm wide and at least 200 mm long, or 2 x M3 screws.</li>
             <li>A USB cable with slack for the wrist. The round display can run from a small LiPo with a JST 1.25 plug instead.</li>
           </ul>
           <h3>Measure the gripper first</h3>
-          <p>The saddle is drawn from the simulation mesh, which shows the gripper block as a 4.5 mm plate. Yours is thicker and carries the gripper servo. Measure the width of the face at two points along it, and the thickness, and set <code>block_half_width</code>, <code>block_taper</code>, <code>block_thickness</code> and <code>servo_clear</code> in the shared source before you export a holder.</p>
+          <p>No dimensioned drawing of the Braccio gripper was found, so the saddle is drawn from the simulation mesh, which shows the gripper block as a 4.5 mm plate with a round hole for the servo. Measure four things and set them in the shared source, then print the saddle fit piece and try it on the gripper:</p>
+          <ol>
+            <li>Width of the block's face at both ends: <code>block_half_width</code> and <code>block_taper</code>.</li>
+            <li>Thickness of the block: <code>block_thickness</code>.</li>
+            <li>Servo body length and width, and how far it stands above the face: <code>servo_slot_length</code>, <code>servo_slot_width</code>, <code>servo_stand_height</code>. The defaults are the SR311's 31.3 x 16.5 x 28.6 mm with margin.</li>
+            <li>Finger pivots to the middle of the servo: <code>servo_from_pivots</code>.</li>
+          </ol>
+          <p>The servo sits in an open-ended slot cut through the pad and one jaw, so its body, horn and lead are in the open and the lead leaves by the open end.</p>
         </div>
         <div>
           <h3>Print</h3>
@@ -214,11 +234,12 @@ def render():
             <li>If it is tight or loose, change <code>board_fit</code> or <code>board_slack</code> and export again. Check the values marked ESTIMATE in the source against your board.</li>
             <li>Print the holder as exported, lens side on the bed. PETG or PLA, 0.2 mm layers, 4 walls, 30 to 40 percent infill, no supports. Bridges are 12 mm or less.</li>
           </ol>
-          <h3>Fit it with cable ties</h3>
+          <h3>Fit it with a cable tie</h3>
           <ol>
-            <li>Sit the saddle on the top face of the gripper block, jaws down the two sloping edges, and push it forward until the jaws are snug.</li>
-            <li>Thread a tie through the front tunnel, just behind the finger pivots, and round the block. It passes over the finger bases in a bridge, clear of them. Add the rear tie, behind the servo, if you want two.</li>
-            <li>Keep the gripper servo lead outside the ties, open and close the claws by hand to see nothing rubs, then pull the ties tight and trim them.</li>
+            <li>Sit the saddle on the top face of the gripper block, jaws down the two sloping edges and the servo in its slot, and push it forward until the jaws are snug.</li>
+            <li>Thread a tie through the tunnel and round the block. It lies between the servo and the finger pivots and passes over the finger bases in a bridge, so it crosses neither.</li>
+            <li>Keep the gripper servo lead outside the tie, open and close the claws by hand to see nothing rubs, then pull the tie tight and trim it.</li>
+            <li>Round display: put the cell in the cover, bring its lead out of the plug slot and into the JST connector under the USB-C socket, and push the cover on until its four arms click over the edge of the ring.</li>
           </ol>
           <h3>Fit it with screws</h3>
           <ol>
@@ -266,7 +287,7 @@ def render():
 {mesh_rows("braccio-arm", BRACCIO_ARM)}
         </tbody>
       </table></div>
-      <p>Also in this group, under the same licence because they include the meshes: {link("braccio-arm", "gripper_cameras_on_gripper.scad")}, the scene that draws the camera holders on the gripper, and the four pictures rendered from it.</p>
+      <p>Also in this group, under the same licence because they include the meshes: {link("braccio-arm", "gripper_cameras_on_gripper.scad")}, the scene that draws the camera holders on the gripper, and the five pictures rendered from it.</p>
     </section>
   </main>
   <footer><span>Sketchbot Studio / Edge Impulse + Arduino UNO Q</span><a href="{REPO_URL}/blob/main/docs/safety.md" target="_blank" rel="noopener noreferrer">Safety and supervision</a></footer>

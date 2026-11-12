@@ -38,8 +38,11 @@ metres. Nothing here has been rescaled or repaired.
 - `scripts/check_gripper_cameras.py` measures the two gripper-top camera
   holders against the gripper, the wrist and the forearm.
 - `gripper_cameras_on_gripper.scad` draws those holders on the gripper. The
-  scene and the four pictures rendered from it include these meshes, so they
-  are kept in this folder under the same licence:
+  scene and the five pictures rendered from it include these meshes, so they
+  are kept in this folder under the same licence. The round display holder is
+  shown with its cover on:
+
+  ![The round display holder from the front, SKETCHBOT on its cover](gripper_xiao_round_display_front.png)
 
   | | From the side | From behind, where the audience stands |
   | --- | --- | --- |

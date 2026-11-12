@@ -48,15 +48,46 @@ WHERE THE NUMBERS COME FROM
     openscad -D 'part="fit_test"' -o braccio_gripper_xiao_round_display_fit_test.stl \
         braccio_gripper_xiao_round_display.scad
 
+THE COVER (`part = "cover"`). A cup over the lens side that encloses the XIAO,
+the camera board and a small LiPo, with SKETCHBOT let into its face.
+
+  fixing     four sprung arms reach past the outside of the ring and hook over
+             its screen-side edge. No tools, and the holder needs no matching
+             feature. Lever the arms out with a fingernail to take it off; the
+             display comes out as before once the cover is off.
+  lens       a collar round the camera barrel steadies the camera board, and
+             the window widens at 45 degrees from the collar so the cover
+             stays out of the picture.
+  battery    a pocket between two ribs for a LiPo standing on its long edge
+             beside the XIAO. Defaults are for a 402030 cell (4.0 x 20 x 30 mm,
+             about 200 mAh). MEASURE YOUR CELL and set battery_t, battery_w
+             and battery_l. The cover's face and the back of the display
+             close the pocket, so the cell cannot fall out.
+  openings   one slot at the USB-C end for the plug, the battery lead (the
+             display's JST connector is under the USB-C socket and its plug
+             goes in from the rim) and a pin to the XIAO's buttons; two small
+             slots beside it for a 2.5 mm tie as strain relief; four vent
+             slots along the top, which also keep the microphone and the LED
+             from being sealed in. The display's slide switch and card slot
+             are in the ring, below the cover, and stay reachable.
+  floor      the cup is cut flat underneath, above the finger bases, so the
+             shape depends on the tilt: export the cover with the same
+             pick_distance as the holder it goes on.
+
+The lettering is recessed 0.6 mm, because the cover prints face down and
+raised letters would need supports. `cover_text` is the word; the font is
+Liberation Sans Bold, which ships with OpenSCAD.
+
 `pose = "gripper"` exports the part where it sits, in the wrist roll frame of
 the URDF, for scripts/check_gripper_cameras.py. The default is the print
-pose: rear rim of the ring on the bed, screen side up.
+pose: holder with the rear rim of the ring on the bed, screen side up; cover
+face down.
 */
 
 include <braccio_gripper_camera_lib.scad>
 
-part = "holder";            // [holder, fit_test, electronics]
-pose = "print";             // [print, gripper]
+part = "holder";            // [holder, fit_test, cover, cover_fit_test, electronics]
+pose = "print";             // [print, gripper, cradle]
 
 // ------------------------------------------------- Round Display for XIAO
 display_pcb_d = 43.1;       // [brd] outline is a 21.53 mm radius circle
@@ -99,9 +130,39 @@ battery_notch = [346, 14];  // rear of the ring cut away for the JST plug
 switch_card_notch = [141, 196];   // gap in the ring at the switch and the card
 foot_sector = [218, 322];   // the part of the ring that grows out of the pad
 
+// ------------------------------------------------- the cover
+cover_wall = 1.6;
+cover_gap = 0.2;            // between the cover's rim and the back of the ring
+cover_text = "SKETCHBOT";
+cover_font = "Liberation Sans:style=Bold";  // bundled with OpenSCAD
+cover_text_size = 5.5;      // cap height; strokes come out about 1 mm wide
+cover_text_depth = 0.6;     // recessed, three 0.2 mm layers
+cover_text_y = 10.5;        // baseline above the display centre
+lens_recess = 1.0;          // lens tip behind the inside of the cover's face
+window_r = 4.5;             // collar bore: 7 mm barrel + 1 mm all round
+collar_r = 6.5;
+floor_y = 3.0;              // wrist roll frame: underside of the cover, above the finger bases
+// Battery: a 402030 LiPo by default. MEASURE YOUR CELL.
+battery_t = 4.0;            // thickness
+battery_w = 20.0;           // width, stands up from the display
+battery_l = 30.0;           // length, across the cover
+battery_fit = 0.5;
+battery_x = -7.0;           // centre of the pocket, on the side away from the XIAO
+battery_rib = 1.2;
+battery_over_board = 3.2;   // ESTIMATE: tallest part on the display's back (RTC cell holder 2.9)
+// Snap arms: angle round the ring of each, clear of the notches and the foot.
+snap_angles = [40, 118, 207, 332];
+snap_arc = 15.4;            // degrees; keeps the arm edges off the ring's 2.5 degree facets
+snap_thick = 1.4;
+snap_reach = 0.6;           // hook over the ring's screen-side edge
+snap_root_z = 13;           // arms are free below this, about 14 mm long
+plug_slot = [19, 12.5];     // width across the XIAO, height above the ring
+tie_slot_angles = [52, 64];
+vent_angles = [76, 86, 96, 106];
+
 // ------------------------------------------------- height and setback
 camera_height = 29;         // optical axis above the centre line at the screen
-face_z = 27;                // screen face, along the gripper from the roll frame
+face_z = 29;                // screen face, along the gripper from the roll frame
 
 // ------------------------------------------------------------------ derived
 function pocket_r() = display_pcb_d / 2 + board_fit;
@@ -223,6 +284,134 @@ module xiao_fit_test() {
     latches_all();
 }
 
+// ------------------------------------------------------------------ the cover
+function xiao_w0() = board_back_w() + socket_height + xiao_pin_spacer;
+function camera_top_w() = xiao_w0() + xiao_stack - 2.0;
+function battery_w0() = board_back_w() + battery_over_board;
+function cover_rim_w() = ring_depth() + cover_gap;
+function cover_in_w() =
+    max(lens_w() + lens_recess, battery_w0() + battery_w + 0.3);
+function cover_out_w() = cover_in_w() + cover_wall;
+
+// Everything above the cover's flat underside, in the holder's frame.
+module above_floor(extra) {
+    from_gripper() translate([-200, floor_y + extra, -200]) cube(400);
+}
+
+module cover_shell() {
+    difference() {
+        intersection() {
+            translate([0, 0, cover_rim_w()])
+                cylinder(h = cover_out_w() - cover_rim_w(), r = ring_r(),
+                         $fn = 144);
+            above_floor(0);
+        }
+        intersection() {
+            translate([0, 0, cover_rim_w() - 1])
+                cylinder(h = cover_in_w() - cover_rim_w() + 1,
+                         r = ring_r() - cover_wall, $fn = 144);
+            above_floor(cover_wall);
+        }
+    }
+}
+
+module cover_inside_parts() {
+    // collar round the camera barrel
+    translate([lens_from_display_centre, 0, camera_top_w() + 0.25])
+        cylinder(h = cover_in_w() - camera_top_w() + 0.3, r = collar_r,
+                 $fn = 64);
+    // battery pocket: a rib each side of the cell and a stop at each end
+    px = battery_t + battery_fit;
+    py = battery_l + battery_fit;
+    z0 = battery_w0() + 5;
+    for (sx = [-1, 1])
+        translate([battery_x + sx * (px / 2 + battery_rib / 2) - battery_rib / 2,
+                   -py / 2 - battery_rib, z0])
+            cube([battery_rib, py + 2 * battery_rib, cover_in_w() - z0 + 0.5]);
+    for (sy = [-1, 1])
+        translate([battery_x - px / 2 - 0.5,
+                   sy * (py / 2 + battery_rib / 2) - battery_rib / 2, z0])
+            cube([px + 1, battery_rib, cover_in_w() - z0 + 0.5]);
+}
+
+module snap_arm(a) {
+    r0 = ring_r() + 0.3;
+    r1 = r0 + snap_thick;
+    rotate([0, 0, a - snap_arc / 2])
+        rotate_extrude(angle = snap_arc, $fn = 144) {
+            // the arm and its hook, with a lead-in for pushing the cover on
+            polygon([[r1, snap_root_z + 3], [r1, -1.7], [r0, -1.7],
+                     [ring_r() - snap_reach, -1.0],
+                     [ring_r() - snap_reach, -0.25], [r0, -0.25],
+                     [r0, snap_root_z + 3]]);
+            // the root, chamfered underneath so it prints without support
+            polygon([[ring_r() - 0.6, snap_root_z], [r1 + 0.3, snap_root_z],
+                     [r1 + 0.3, snap_root_z + 3],
+                     [ring_r() - 0.6, snap_root_z + 5.5]]);
+        }
+}
+
+module cover_cuts() {
+    // lens window: straight through the collar, then opening at 45 degrees
+    translate([lens_from_display_centre, 0, 0]) rotate_extrude($fn = 96)
+        polygon([[0, camera_top_w() - 1], [window_r, camera_top_w() - 1],
+                 [window_r, cover_in_w()],
+                 [window_r + cover_wall + 0.3, cover_out_w() + 0.3],
+                 [0, cover_out_w() + 0.3]]);
+    // USB-C plug, battery lead and button access, at the USB-C end
+    translate([ring_r() - 8, -plug_slot[0] / 2, cover_rim_w() - 1])
+        cube([30, plug_slot[0], plug_slot[1] + 1]);
+    // strain relief tie
+    for (a = tie_slot_angles)
+        rotate([0, 0, a]) translate([ring_r() - cover_wall - 1, -0.9, 10])
+            cube([cover_wall + 2, 1.8, 3.4]);
+    // vents
+    for (a = vent_angles)
+        rotate([0, 0, a]) translate([ring_r() - cover_wall - 1, -0.8, 9.5])
+            cube([cover_wall + 2, 1.6, 12]);
+    // lettering, let into the outer face
+    translate([0, cover_text_y, cover_out_w() - cover_text_depth])
+        linear_extrude(height = cover_text_depth + 1)
+            text(cover_text, size = cover_text_size, font = cover_font,
+                 halign = "center", valign = "baseline");
+}
+
+module cover_body(with_inside) {
+    difference() {
+        union() {
+            cover_shell();
+            if (with_inside)
+                intersection() {
+                    cover_inside_parts();
+                    translate([0, 0, cover_rim_w() + 0.5])
+                        cylinder(h = 100, r = ring_r() - cover_wall / 2,
+                                 $fn = 144);
+                    above_floor(cover_wall / 2);
+                }
+        }
+        cover_cuts();
+    }
+    for (a = snap_angles) snap_arm(a);
+}
+
+module xiao_cover() {
+    cover_body(true);
+}
+
+// Just the rim of the cover and its four arms, to try the snap on the ring.
+module xiao_cover_fit_test() {
+    intersection() {
+        cover_body(false);
+        translate([-100, -100, -50]) cube([200, 200, 50 + snap_root_z + 6.5]);
+    }
+}
+
+module xiao_battery() {
+    color([0.55, 0.6, 0.7])
+        translate([battery_x - battery_t / 2, -battery_l / 2, battery_w0()])
+            cube([battery_t, battery_l, battery_w]);
+}
+
 // The display, the XIAO and a USB-C plug as plain blocks. Not printed: it is
 // what the pictures show in the cradle and what the clearance check keeps
 // clear of the gripper along with the holder itself.
@@ -254,24 +443,37 @@ module xiao_electronics() {
     }
 }
 
-// For the pictures: holder and boards where they sit on the gripper.
-module xiao_on_gripper() {
+// For the pictures: holder, boards and cover where they sit on the gripper.
+module xiao_on_gripper(with_cover = true) {
     on_gripper() {
         color([0.2, 0.55, 0.75]) xiao_holder();
         xiao_electronics();
+        if (with_cover) color([0.95, 0.75, 0.2]) xiao_cover();
+        else xiao_battery();
     }
 }
 
 module the_part() {
     if (part == "fit_test") xiao_fit_test();
-    else if (part == "electronics") xiao_electronics();
+    else if (part == "cover") xiao_cover();
+    else if (part == "cover_fit_test") xiao_cover_fit_test();
+    else if (part == "electronics") { xiao_electronics(); xiao_battery(); }
     else xiao_holder();
+}
+
+// The cover prints face down; its fit piece on the cut that made it.
+module cover_to_print() {
+    top = part == "cover_fit_test" ? snap_root_z + 6.5 : cover_out_w();
+    translate([0, 0, top]) rotate([180, 0, 0]) children();
 }
 
 assert(wall >= latch_beam + latch_gap + 1.2,
        "wall leaves under 1.2 mm of ring outside the latch slots");
 assert(ring_depth() - latch_reach > hook_w(),
        "rear_zone is too shallow for the latch hook and its lead-in");
+assert(battery_x + battery_t / 2 + battery_fit / 2 + battery_rib
+       <= xiao_centre_from_display_centre - xiao_length / 2,
+       "the battery pocket runs into the XIAO; move battery_x");
 assert(camera_height - pocket_r() >= pad_top_y() + 0.5,
        "camera_height puts the display board into the saddle pad");
 
@@ -285,12 +487,17 @@ echo(str("gripper_camera {",
     ", \"target\": [0, 0, ", target_z(), "]",
     ", \"axis\": ", optical_dir(),
     ", \"lens\": ", [0, camera_height, face_z] + lens_w() * optical_dir(),
+    ", \"cover_face_w\": ", cover_out_w(),
+    ", \"window\": ", [window_r, cover_in_w() - lens_w(),
+                       window_r + cover_wall, cover_out_w() - lens_w()],
     ", \"fov_deg\": ", camera_fov_deg,
-    ", \"ties\": ", ties,
+    ", \"ties\": ", ties(),
     ", \"tie_tunnel\": ", [tie_tunnel_width, tie_tunnel_thick],
     ", \"block\": ", [block_centre_x, block_half_width, block_ref_z,
                       block_taper, block_top_y, block_thickness, jaw_fit + jaw],
     "}"));
 
 if (pose == "gripper") on_gripper() the_part();
+else if (pose == "cradle") the_part();      // as built, for pictures
+else if (part == "cover" || part == "cover_fit_test") cover_to_print() the_part();
 else to_print() the_part();
