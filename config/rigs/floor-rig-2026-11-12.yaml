@@ -1,0 +1,40 @@
+# Pick-and-place values for the floor rig with the short printed fingers and
+# the XIAO round-display holder, as it stood on 2026-11-12. Copy the
+# pick_place block into config/runtime.yaml on the board to use it.
+#
+# Read docs/pick-place-service.md, "What was measured", before trusting any
+# of it. Nothing here was measured with a ruler. "photo" means read off an
+# overhead camera frame of the arm held level; "assumed" means nobody
+# measured it at all. Live motion must stay off until the values marked
+# assumed have been measured and the photo values checked.
+pick_place:
+  arm:
+    # The bricks and bin sit on the side the folded gripper points to.
+    reach_behind: true
+    # photo 2026-11-12: with the jaws closed the gripper continues the
+    # forearm's line to within about 10 degrees at wrist servo 90.
+    wrist_zero_deg: 90.0
+  tool:
+    # photo 2026-11-12: fingertips about 105 mm (plus or minus 15) from the
+    # wrist pitch axis. The split between the three numbers is assumed.
+    mount_from_wrist_mm: 45.0
+    grasp_from_mount_mm: 55.0
+    tip_from_mount_mm: 60.0
+    # photo 2026-11-12: at wrist roll servo 90, reaching behind, the round
+    # display faces up, so the holder is on the outer face. 90 in this file
+    # is 90 at the servo (the half turn of reach_behind leaves 90 alone).
+    wrist_rotation_deg: 90.0
+  gripper:
+    # photo 2026-11-12: about 45 mm between the fingertips at servo 10 and
+    # closed at servo 60. Rough; measure with calipers.
+    jaw_calibration:
+      - {deg: 10.0, width_mm: 45.0}
+      - {deg: 60.0, width_mm: 3.0}
+    open_width_mm: 44.0
+  bin:
+    # assumed: nobody gave the wall height. 110 is taller than any bin of
+    # this footprint is likely to be.
+    rim_height_mm: 110.0
+  # Not set here because not measured: desk.z_mm (floor height in the arm
+  # frame), camera.* (holder geometry, picture rotation, field of view),
+  # bin.fallback_xy_mm, search range.

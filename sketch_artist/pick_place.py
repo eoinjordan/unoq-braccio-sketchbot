@@ -121,6 +121,7 @@ DEFAULTS = {
         "remember": True,
     },
     "speed": {"max_step_deg": 2.0, "step_interval_s": 0.05, "slow_factor": 0.4},
+    "arm": {"reach_behind": False, "wrist_zero_deg": 90.0},
 }
 
 IDLE, STARTING, SEARCH, APPROACH, GRASP, LIFT, VERIFY = (
@@ -213,6 +214,8 @@ def validate_settings(settings: dict) -> None:
     approach = settings["approach"]
     if not 0.1 <= float(approach["gain"]) <= 1.0:
         raise ValueError("approach.gain must be between 0.1 and 1")
+    if not 30.0 <= float(settings["arm"]["wrist_zero_deg"]) <= 150.0:
+        raise ValueError("arm.wrist_zero_deg must be between 30 and 150")
     speed = settings["speed"]
     if not 0.1 <= float(speed["max_step_deg"]) <= 5.0:
         raise ValueError("speed.max_step_deg must be between 0.1 and 5")
@@ -241,12 +244,28 @@ def tool_workspace(workspace: dict, settings: dict) -> dict:
     from web.control import workspace_for_tool
 
     tool, gripper = settings["tool"], settings["gripper"]
-    return workspace_for_tool(workspace, {"active": "gripper", "gripper": {
+    adapted = workspace_for_tool(workspace, {"active": "gripper", "gripper": {
         "length_mm": float(tool["mount_from_wrist_mm"]) + float(tool["grasp_from_mount_mm"]),
         "pitch_deg": float(tool["pitch_deg"]),
         "open_deg": round(jaw_angle(gripper["open_width_mm"],
                                     gripper["jaw_calibration"])),
     }})
+    arm = settings.get("arm", DEFAULTS["arm"])
+    # The wrist zero in workspace.yaml was set for the pen, which sits at an
+    # angle on the gripper. The gripper has its own.
+    adapted["servo_calibration"]["wrist_vertical"]["offset"] = float(arm["wrist_zero_deg"])
+    if arm["reach_behind"]:
+        # Through MirroredArm the servo ends swap: a stop measured at the low
+        # end of the elbow or wrist is at the high end here, and the low end
+        # is the rest pose, which the arm reaches every time it powers up.
+        limits = {}
+        for joint, lim in (workspace.get("servo_limits") or {}).items():
+            if joint in ("elbow", "wrist_vertical") and "min" in (lim or {}):
+                limits[joint] = {"max": 180.0 - float(lim["min"])}
+            else:
+                limits[joint] = lim
+        adapted["servo_limits"] = limits
+    return adapted
 
 
 # ------------------------------------------------------------ motion guard

@@ -204,3 +204,12 @@ def arm_where_expected(frame_bgr: np.ndarray, P: np.ndarray, arm: ArmGeometry,
         fractions.append(float(np.count_nonzero(orange & disc)) / max(1, total))
     good = sum(f >= min_fraction for f in fractions)
     return ArmSighting(good >= need, tuple(round(f, 2) for f in fractions), tuple(points))
+
+
+def grow(mask: np.ndarray, margin_px: int) -> np.ndarray:
+    """Mask grown outward by a margin (done at quarter size for speed)."""
+    small = cv2.resize(mask, None, fx=0.25, fy=0.25, interpolation=cv2.INTER_NEAREST)
+    k = max(1, int(margin_px / 4))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * k + 1, 2 * k + 1))
+    grown = cv2.dilate(small, kernel)
+    return cv2.resize(grown, (mask.shape[1], mask.shape[0]), interpolation=cv2.INTER_NEAREST)

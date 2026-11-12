@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Choose what drives the arm after boot: the Studio or pick and place.
+# Only one of the two may be enabled, because both send moves to the same
+# arm agent and neither knows about the other.
+set -euo pipefail
+usage() { echo "usage: sketchbot-mode pickplace|studio|none|status" >&2; exit 2; }
+[[ $# -eq 1 ]] || usage
+case "$1" in
+  pickplace)
+    systemctl --user disable --now sketchbot-studio.service 2>/dev/null || true
+    systemctl --user enable --now sketchbot-pickplace.service
+    ;;
+  studio)
+    systemctl --user disable --now sketchbot-pickplace.service 2>/dev/null || true
+    systemctl --user enable --now sketchbot-studio.service
+    ;;
+  none)
+    systemctl --user disable --now sketchbot-pickplace.service 2>/dev/null || true
+    systemctl --user disable --now sketchbot-studio.service 2>/dev/null || true
+    ;;
+  status) ;;
+  *) usage ;;
+esac
+for unit in sketchbot-pickplace sketchbot-studio braccio-agent; do
+  printf '%-22s boot: %-9s now: %s\n' "$unit" \
+    "$(systemctl --user is-enabled "$unit.service" 2>/dev/null || true)" \
+    "$(systemctl --user is-active "$unit.service" 2>/dev/null || true)"
+done

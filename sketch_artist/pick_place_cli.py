@@ -273,6 +273,9 @@ def main(argv=None) -> int:
             except OSError as exc:
                 print(f"Cannot reach the arm agent: {exc}", file=sys.stderr)
                 return 1
+        if arm is not None and settings["arm"]["reach_behind"]:
+            from .mirrored_arm import MirroredArm
+            arm = MirroredArm(arm)
         controller = PickPlaceController(
             workspace, settings, source, arm=world if world is not None else arm,
             dry_run=not args.live and world is None, slow=args.slow)

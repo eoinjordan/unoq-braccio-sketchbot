@@ -178,8 +178,7 @@ class RigConfig:
     settle_s: float = 0.7
     min_sharpness: float = 60.0
     sharpness_roi: Optional[Tuple[int, int, int, int]] = None
-    work_zone_radius_px: float = 560.0
-    work_zone_x_max: Optional[int] = None
+    watch_margin_px: int = 150          # about 115 mm on the floor
     sheet_radius_px: float = 175.0
     arm_mask_px: int = 130
     min_intruder_px: int = 1500
@@ -246,7 +245,11 @@ class Rig:
             if shift.moved:
                 raise Halt("base sheet outline changed after '%s' (%d px, %.0f%% of the sheet)"
                            % (label, shift.changed_px, 100 * shift.fraction))
-        zone = watch.disc_mask(shape, centre, self.cfg.work_zone_radius_px, self.cfg.work_zone_x_max)
+        # The watched zone is the arm's silhouette at both poses, grown by a
+        # margin: where the arm is, was, or passed, plus a body width. A
+        # person sitting further off than that is not in the arm's way and
+        # does not stop the run; one who comes closer does.
+        zone = watch.grow(covered, self.cfg.watch_margin_px)
         explained = covered | watch.spots_mask(shape, self.expected_spots)
         found = watch.unexplained_changes(self.reference, frame, zone, explained,
                                           self.cfg.min_intruder_px)

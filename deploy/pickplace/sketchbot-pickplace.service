@@ -1,0 +1,27 @@
+[Unit]
+Description=Sketchbot pick and place (monitor page on :7110)
+Documentation=file://%h/sketchbot-pickplace/docs/pick-place-service.md
+After=network.target braccio-agent.service
+Wants=braccio-agent.service
+# One driver at a time. Starting this unit stops the Studio, and starting
+# the Studio stops this unit. Use sketchbot-mode to choose which one comes
+# up at boot; with both enabled systemd would drop one of them at random.
+Conflicts=sketchbot-studio.service braccio-calibrate.service braccio-sketch.service
+
+[Service]
+Type=notify
+NotifyAccess=main
+WorkingDirectory=%h/sketchbot-pickplace
+Environment=PYTHONUNBUFFERED=1
+# PICKPLACE_ARGS: see pickplace.env. Without --live every session is a dry run.
+EnvironmentFile=-%h/.config/sketchbot/pickplace.env
+ExecStart=%h/sketchbot-pickplace/.venv/bin/python -u -m sketch_artist.pick_place_service $PICKPLACE_ARGS
+# The service reports to systemd once a second. If it hangs for this long it
+# is killed and restarted, and comes back waiting for Start.
+WatchdogSec=20
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

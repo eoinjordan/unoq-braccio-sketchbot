@@ -105,9 +105,8 @@ class State:
         arm = self.arm()
         P = self.P()
         camera = OverheadCamera(usb_id=self.data["camera_usb_id"], focus=self.data["camera_focus"])
-        bx, _ = project(P, (0.0, 0.0, 0.0))
         cfg = RigConfig(sharpness_roi=tuple(self.data["roi"]), arm_mask_px=arm_mask_px,
-                        work_zone_x_max=int(bx + 150))
+                        check_arm=bool(self.data.get("check_arm", True)))
         return Rig(camera, ArmLink(self.data["arm_host"], self.data["arm_port"]), arm,
                    self.envelope(arm, floor_guard), P, cfg, self.log, self.frames)
 
@@ -164,9 +163,13 @@ def stage_level(state: State, args) -> int:
         rig.move(level, "level jaws 10")
         for jaws in args.jaws:
             rig.move(level[:5] + (jaws,), "level jaws %g" % jaws)
+        for wrist in args.wrists:
+            rig.move(level[:3] + (wrist, 90.0, 10.0), "level wrist %g" % wrist)
+        if args.wrists:
+            level = level[:3] + (args.wrists[-1],) + level[4:]
         for roll in args.rolls:
             rig.move(level[:4] + (roll, 10.0), "level roll %g" % roll)
-        rig.move(level, "level roll 90")
+        rig.move(level[:5] + (10.0,), "level roll 90")
         rig.move(carry(base, 10.0), "fold up")
         rig.move(REST_POSE[:5] + (10.0,), "park")
     finally:
@@ -419,6 +422,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--base", type=float, default=140.0)
     ap.add_argument("--jaws", type=_floats, default=None)
     ap.add_argument("--rolls", type=_floats, default=[])
+    ap.add_argument("--wrists", type=_floats, default=[],
+                    help="level stage: wrist servo angles to step through")
     ap.add_argument("--bases", type=_floats, default=[70, 95, 120, 145, 170])
     ap.add_argument("--reaches", type=_floats, default=[250, 290, 330])
     ap.add_argument("--heights", type=_floats, default=[150, 195, 240])

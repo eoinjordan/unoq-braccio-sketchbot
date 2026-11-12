@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Sketchbot pick and place
+Comment=Full-screen Start and Stop page for the arm
+Exec=/home/arduino/bin/pickplace-kiosk.sh
+X-GNOME-Autostart-enabled=true

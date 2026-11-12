@@ -145,3 +145,19 @@ speed:
   step_interval_s: 0.05
   # --slow multiplies the step by this and divides the pause by it.
   slow_factor: 0.4
+
+arm:
+  # false: the bricks and the bin are in front of the arm, where base servo
+  # 90 points. true: they are behind it, on the side the folded gripper
+  # points to, and the arm leans over its shoulder to reach them (see
+  # sketch_artist/mirrored_arm.py). Everything else in this file is then
+  # read in a frame turned half a turn: "ahead" is physically behind the
+  # base, and tool.wrist_rotation_deg is the angle before the half turn
+  # (0 here drives the wrist roll servo to 180).
+  reach_behind: false
+  # Wrist servo angle at which the gripper centre line is in line with the
+  # forearm, in the forward frame. 90 is the arm model. The zero in
+  # workspace.yaml was calibrated with the pen grip, which sits at an angle
+  # on the gripper, so the gripper needs its own. MEASURE: hold the forearm
+  # level and step the wrist until the claws continue the forearm's line.
+  wrist_zero_deg: 90.0
