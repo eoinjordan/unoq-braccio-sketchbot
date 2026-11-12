@@ -75,6 +75,27 @@ def test_holder_downloads_are_listed(holder, suffix):
     assert "braccio_gripper_camera_lib.scad" in text
 
 
+@pytest.mark.parametrize("name", [
+    "braccio_gripper_xiao_round_display_cover.stl",
+    "braccio_gripper_xiao_round_display_near_cover.stl",
+    "braccio_gripper_xiao_round_display_far_cover.stl",
+    "braccio_gripper_xiao_round_display_cover_fit_test.stl",
+    "braccio_gripper_xiao_round_display_cover_preview.png",
+    "braccio_gripper_saddle_fit_test.stl",
+    "braccio_gripper_saddle_fit_test.scad",
+])
+def test_cover_and_saddle_fit_piece_are_listed(name):
+    text = PARTS_PAGE.read_text(encoding="utf-8")
+    assert f'href="./hardware/pencil-grip/{name}"' in text
+
+
+def test_page_tells_the_owner_what_to_measure():
+    text = PARTS_PAGE.read_text(encoding="utf-8")
+    for name in ("block_half_width", "block_thickness", "servo_slot_length",
+                 "servo_from_pivots", "battery_l"):
+        assert name in text
+
+
 def test_the_side_arm_holder_is_gone():
     assert not list((HARDWARE / "pencil-grip").glob("braccio_wrist_xiao*"))
     assert "braccio_wrist_xiao" not in PARTS_PAGE.read_text(encoding="utf-8")
@@ -88,7 +109,7 @@ def test_each_group_states_its_own_licence():
     arm = text[text.index('id="arm"'):]
     assert "CC BY-SA 4.0" in parts and "GPL" not in parts
     assert "GNU General Public License v3.0" in arm
-    assert parts.count("<td>CC BY-SA 4.0</td>") >= 17
+    assert parts.count("<td>CC BY-SA 4.0</td>") >= 22
     assert arm.count("<td>GPL-3.0</td>") == len(ARM_MESHES)
     assert 'href="./hardware/pencil-grip/LICENSE"' in text
     assert 'href="./hardware/braccio-arm/LICENSE"' in text

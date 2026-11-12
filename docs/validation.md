@@ -23,6 +23,12 @@ limits, arming/stop races, status contention, stale browser state, gripper
 geometry, complete pick/place and test-square sequences, tool confirmation,
 touch controls, gamepad inputs, 3D pixels/animation and gallery navigation.
 
+Colour pick and place ([pick-place.md](pick-place.md)) is covered in simulation
+only: the detection-line parser, the gripper camera model, the limit checks and
+the whole search, approach, grasp and place loop against a simulated camera on
+the software arm. It has not been run on the real arm, and its configuration
+values are nominal.
+
 The [CI workflow](../.github/workflows/test.yml) repeats the Python checks on
 3.11 and 3.13, and the web checks on Node 22. A local pass is not a claim that a
 GitHub Actions run has already completed.

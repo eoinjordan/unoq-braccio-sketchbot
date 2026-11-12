@@ -109,6 +109,12 @@ PYDEPS
     ensure_venv
     "$PY" -m web.server
     ;;
+  pickplace)
+    # Colour pick and place with the gripper-top camera. Dry-run unless
+    # --live is passed; try "--source sim" first. See docs/pick-place.md.
+    ensure_venv
+    "$PY" -m sketch_artist.pick_place_cli "${@:2}"
+    ;;
   test)
     ensure_venv
     if ! "$PY" -c "import pytest" 2>/dev/null; then
@@ -118,7 +124,7 @@ PYDEPS
     "$PY" -m pytest "${@:2}"
     ;;
   *)
-    echo "usage: $0 {setup|dry|sim|agent|draw|calibrate|gallery|test}" >&2
+    echo "usage: $0 {setup|dry|sim|agent|draw|calibrate|gallery|pickplace|test}" >&2
     exit 2
     ;;
 esac

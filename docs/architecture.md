@@ -45,6 +45,11 @@ config defaults + config/runtime.yaml -> studio, portrait CLI, calibration UI
 | `sketch_artist/preview.py`   | Dry-run PNG/SVG of the toolpath.                            |
 | `sketch_artist/gallery.py`   | Composite the branded postcard + update the manifest.       |
 | `sketch_artist/cli.py`       | Orchestrator (`--image`, `--dry-run`, `--no-arm`, `--sim`, `--slow`).|
+| `sketch_artist/detections.py`| Gripper camera `DET` lines: parser, USB serial source, replay. |
+| `sketch_artist/gripper_camera.py`| Gripper-top camera pose from the FK; pinhole projection and aim point. |
+| `sketch_artist/pick_place.py`| Colour pick and place: settings, checked motion, search/approach/grasp/place loop. |
+| `sketch_artist/sim_camera.py`| Simulated desk, bricks, bin and gripper camera for the software arm. |
+| `sketch_artist/pick_place_cli.py`| Pick-and-place command line and its monitor page (`web/static/pickplace.html`). |
 | `web/server.py`              | Studio, gallery and guarded JSON/camera APIs (stdlib HTTP, port 7100). |
 | `web/control.py`             | Discovery, tool profiles, task planning, arming leases, bounded moves and settings. |
 | `web/src/robot.js`           | Three.js articulated model, active end effector, paper and pick/place markers. |

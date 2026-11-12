@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sketchbot / Pick and place</title>
+  <style>
+    :root { color-scheme: light dark; --ink: #0b1221; --paper: #f5f7fa; --line: #c9d1dc; --go: #087f60; --stop: #b3261e; }
+    @media (prefers-color-scheme: dark) { :root { --ink: #e8edf3; --paper: #10151d; --line: #344054; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; font: 15px/1.45 system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+    header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    h1 { font-size: 20px; margin: 0; }
+    main { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+    @media (max-width: 760px) { main { grid-template-columns: minmax(0, 1fr); } }
+    canvas { width: 100%; aspect-ratio: 4 / 3; border: 1px solid var(--line); border-radius: 6px; background: #1b2330; display: block; }
+    button { font: inherit; font-weight: 600; padding: 14px 28px; border: 0; border-radius: 6px; color: #fff; background: var(--stop); cursor: pointer; min-width: 140px; }
+    button:disabled { opacity: 0.55; cursor: default; }
+    button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+    dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0 0 12px; }
+    dt { opacity: 0.7; }
+    dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    #state { font-weight: 700; text-transform: uppercase; }
+    pre { margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; max-height: 260px; overflow: auto; font-size: 12px; white-space: pre-wrap; }
+    .note { font-size: 13px; opacity: 0.8; margin: 8px 0 0; }
+    .flag { padding: 2px 8px; border-radius: 4px; border: 1px solid var(--line); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Pick and place</h1>
+    <span class="flag" id="mode">connecting</span>
+    <button id="stop" type="button">Stop</button>
+  </header>
+  <main>
+    <section aria-label="Camera detections">
+      <canvas id="view" width="640" height="480" role="img" aria-label="Detections in the gripper camera picture"></canvas>
+      <p class="note">Dots are detections (ringed when at or above the confidence threshold). The cross is where the gripper centre line meets the desk or the bin rim.</p>
+    </section>
+    <section aria-label="Run state">
+      <dl>
+        <dt>State</dt><dd id="state" aria-live="polite">-</dd>
+        <dt>Detail</dt><dd id="message">-</dd>
+        <dt>Picked / placed</dt><dd id="counts">-</dd>
+        <dt>Detections</dt><dd id="detections">-</dd>
+        <dt>Last frame</dt><dd id="age">-</dd>
+        <dt>Grasp point</dt><dd id="grasp">-</dd>
+        <dt>Moves</dt><dd id="moves">-</dd>
+        <dt>Failures</dt><dd id="failures">-</dd>
+      </dl>
+      <pre id="log" aria-label="Recent log"></pre>
+      <p class="note">Stop ends the run and stops commands being sent. The arm holds its last pose and the claws stay as they are. It does not cut servo power: keep a hand on the power switch.</p>
+    </section>
+  </main>
+  <script>
+    const colours = { red: "#e5484d", yellow: "#f2c94c", white: "#f5f5f5", bin: "#3b82f6" };
+    const el = (id) => document.getElementById(id);
+    const canvas = el("view"), ctx = canvas.getContext("2d");
+
+    function draw(state) {
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = "#3a4658"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+      if (state.aim) {
+        const x = state.aim[0] * w, y = state.aim[1] * h;
+        ctx.strokeStyle = "#00e5a0"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x - 14, y); ctx.lineTo(x + 14, y); ctx.moveTo(x, y - 14); ctx.lineTo(x, y + 14); ctx.stroke();
+      }
+      ctx.font = "14px system-ui, sans-serif";
+      for (const d of state.detections) {
+        const x = d.x * w, y = d.y * h;
+        ctx.fillStyle = colours[d.label] || "#b0b8c4";
+        ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
+        if (d.confidence >= state.confidence) {
+          ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(x, y, 13, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(d.label + " " + d.confidence.toFixed(2), Math.min(x + 16, w - 90), Math.max(16, y + 5));
+      }
+    }
+
+    function show(state) {
+      el("mode").textContent = state.dry_run ? "dry-run: nothing is sent to the arm" : "moves are being sent";
+      el("state").textContent = state.state;
+      el("message").textContent = state.message || "-";
+      el("counts").textContent = state.picked + " / " + state.placed;
+      el("detections").textContent = state.detections.length
+        ? state.detections.map((d) => d.label + " (" + d.x.toFixed(2) + ", " + d.y.toFixed(2) + ") " + d.confidence.toFixed(2)).join("; ")
+        : "none";
+      el("age").textContent = state.frame_age_s === null ? "none yet"
+        : state.frame_age_s.toFixed(2) + " s ago" + (state.inference_ms === null ? "" : ", " + state.inference_ms + " ms inference");
+      el("grasp").textContent = state.grasp_point_mm.join(", ") + " mm";
+      el("moves").textContent = state.moves_sent + " sent, " + state.moves_planned + " planned";
+      el("failures").textContent = state.failures.length ? state.failures.map((f) => f.reason + " (" + f.label + ")").join("; ") : "none";
+      el("log").textContent = state.log.join("\n");
+      el("log").scrollTop = el("log").scrollHeight;
+      const ended = ["done", "stopped", "fault"].includes(state.state);
+      el("stop").disabled = ended || state.stop_requested;
+      el("stop").textContent = state.stop_requested && !ended ? "Stopping" : "Stop";
+      draw(state);
+    }
+
+    async function poll() {
+      try {
+        const reply = await fetch("/api/pickplace/state", { cache: "no-store" });
+        show(await reply.json());
+      } catch (error) {
+        el("mode").textContent = "no connection to the pick-and-place program";
+        el("state").textContent = "unknown";
+      }
+      setTimeout(poll, 250);
+    }
+
+    el("stop").addEventListener("click", async () => {
+      el("stop").disabled = true;
+      try {
+        await fetch("/api/pickplace/stop", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      } catch (error) {
+        el("mode").textContent = "stop request failed: use the power switch";
+        el("stop").disabled = false;
+      }
+    });
+    poll();
+  </script>
+</body>
+</html>

@@ -123,6 +123,11 @@ No force sensor, object detection, grasp success feedback or automatic recovery
 is implied. A completed command sequence does not prove that an object was picked
 up. Changes to the arm pose outside the task invalidate it before further steps.
 
+Camera-guided colour pick and place is a separate command-line program with
+its own monitor page, not a Studio task: see [pick-place.md](pick-place.md).
+It does not share the Studio's session interlock, so never run it while a
+Studio session is armed.
+
 ### Test Sketch
 
 **Plan test square** prepares a 10 mm square centred in the configured paper

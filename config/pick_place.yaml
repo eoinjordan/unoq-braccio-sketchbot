@@ -1,0 +1,147 @@
+# Colour pick and place with the camera on top of the gripper.
+# Distances in millimetres, angles in degrees. See docs/pick-place.md.
+#
+# Every value here is a nominal default. None has been checked on a real
+# arm. The ones marked MEASURE have to be measured or calibrated on yours
+# before the arm is allowed to move (docs/pick-place.md, "Calibration").
+# These are the same values as DEFAULTS in sketch_artist/pick_place.py; a
+# test keeps the two in step. Override single values in config/runtime.yaml
+# under a `pick_place:` key if you would rather not edit this file.
+
+# Which bricks to pick, most wanted first. Choose from red, yellow, white.
+colours: [red, yellow, white]
+# false: pick whichever enabled colour is in sight, preferring the earlier
+# ones. true: clear the first colour completely, then the next.
+strict_order: false
+# A detection counts at or above this confidence ...
+confidence: 0.6
+# ... once it has been seen in this many frames running, in the same place.
+confirm_frames: 3
+# Tries at one brick before it is left alone for the rest of the run.
+max_attempts: 3
+# Stop after this many bricks, picked or given up on.
+max_picks: 12
+# Halt if the camera sends no detection line for this long, in seconds.
+watchdog_s: 1.0
+
+tool:
+  # Elevation of the gripper centre line: -90 is straight down. -60 leans
+  # the claws outwards, which is what gives this arm a usable band of desk
+  # (see "Limits" in the docs). MEASURE: check with the arm at a search pose.
+  pitch_deg: -60.0
+  # wrist_vertical axis to the finger mounting face (60 + 30 in the URDF).
+  mount_from_wrist_mm: 90.0
+  # Finger mounting face to the point between the claws that closes on the
+  # brick. MEASURE.
+  grasp_from_mount_mm: 57.0
+  # Finger mounting face to the claw tips (braccio_grip_lib.scad). MEASURE.
+  tip_from_mount_mm: 61.4
+  # Wrist roll servo angle held throughout. It must put the camera on the
+  # face of the gripper that looks away from the base. 0 follows from the
+  # URDF; the real servo may turn the other way. MEASURE.
+  wrist_rotation_deg: 0.0
+
+camera:
+  # From hardware/pencil-grip/README.md, for the holder you printed:
+  #   XIAO round display  near 17.3 / 21.0 / 22.6   default 13.3 / 22.8 / 23.1
+  #                       far   9.0 / 24.8 / 23.5
+  #   ESP-EYE             near 11.3 / 16.5 /  7.1   default  8.6 / 17.0 /  7.2
+  #                       far   5.8 / 17.5 /  7.2
+  tilt_deg: 13.3              # optical axis towards the centre line
+  height_mm: 22.8             # lens above the gripper centre line
+  lens_from_mount_mm: 23.1    # lens in front of the finger mounting face
+  # Diagonal field of view and picture shape. 66 is an estimate for the
+  # OV2640. MEASURE.
+  fov_diagonal_deg: 66.0
+  aspect: [4, 3]
+  # How the detector's picture is turned about the optical axis relative to
+  # the holder (top of the picture = away from the gripper centre line), and
+  # whether it is mirrored left to right. MEASURE.
+  image_rotation_deg: 0.0
+  mirror: false
+  # Wrist roll servo angle at which the camera is on the outer face, and the
+  # direction the face turns as the angle grows. Leave alone unless the
+  # wrist is rolled during a run.
+  roll_zero_deg: 0.0
+  roll_sign: 1.0
+
+desk:
+  # Height of the surface the bricks lie on, in the arm base frame. 0 is the
+  # table that links.base_height_mm in workspace.yaml is measured from.
+  # MEASURE at the pick radius: see the touch-off step in the docs.
+  z_mm: 0.0
+  # The grasp point and the claw tips are never commanded below z_mm plus
+  # this. Any move that would go lower is refused.
+  margin_mm: 3.0
+
+brick:
+  # Height of the grasp point above the desk when the claws close. A 2x4
+  # brick is 31.8 x 15.8 mm and 9.6 mm tall without its studs.
+  grasp_height_mm: 8.0
+
+gripper:
+  # Gap between the claws on the way down, and the gap commanded to hold a
+  # 2x4 brick across its 15.8 mm width (a little under, to squeeze).
+  open_width_mm: 45.0
+  close_width_mm: 13.0
+  # Gap between the claws at two gripper servo angles. MEASURE with a ruler
+  # or calipers; these two points are guesses.
+  jaw_calibration:
+    - {deg: 10.0, width_mm: 60.0}
+    - {deg: 73.0, width_mm: 0.0}
+  # Pause after opening or closing, in seconds.
+  settle_s: 0.6
+
+search:
+  # Height of the grasp point above the desk for searching, carrying and
+  # every move between places.
+  height_mm: 80.0
+  # Distance of the grasp point from the base axis while sweeping. One ring
+  # is enough for the band the arm can reach at the default pitch.
+  radii_mm: [235.0]
+  # Base servo range swept, and the base step between frames.
+  base_min_deg: 20.0
+  base_max_deg: 160.0
+  step_deg: 2.0
+
+approach:
+  gain: 0.6                 # share of the measured error corrected per move
+  max_step_mm: 15.0         # longest sideways correction in one move
+  tolerance_mm: 3.0         # centred when the error on the desk is below this
+  centre_frames: 2          # ... in this many frames running
+  settle_frames: 2          # frames thrown away after each move
+  descent_step_mm: 15.0     # step down the centre line between corrections
+  # Stop correcting when the grasp point is this far from the brick; the
+  # rest is a straight move down the centre line with the brick out of sight.
+  commit_distance_mm: 40.0
+  lost_frames: 12           # frames without the brick before giving up
+  track_gate_mm: 40.0       # how far it may appear to jump between frames
+  timeout_s: 45.0
+
+verify:
+  # After the lift, look at where the brick was for this many frames. If a
+  # brick of that colour is still within radius_mm in half of them, the
+  # grasp failed.
+  frames: 5
+  radius_mm: 18.0
+
+bin:
+  rim_height_mm: 40.0             # top of the bin above the desk. MEASURE.
+  release_clearance_mm: 20.0      # grasp point above the rim when releasing
+  tolerance_mm: 6.0               # centred on the bin within this
+  search_timeout_s: 30.0          # then use the fallback position
+  # Middle of the bin in the arm base frame (x away from the base, y to the
+  # arm's left), used when the bin is not seen in time. MEASURE.
+  fallback_xy_mm: [130.0, 225.0]
+  # Bricks seen this close to the middle of the bin are taken to be in it.
+  ignore_radius_mm: 75.0
+  # Go straight back to where the bin was last seen, then centre on it.
+  remember: true
+
+speed:
+  # Largest change of any joint per command, never more than
+  # motion.max_step_deg in workspace.yaml, and the pause between commands.
+  max_step_deg: 2.0
+  step_interval_s: 0.05
+  # --slow multiplies the step by this and divides the pause by it.
+  slow_factor: 0.4
