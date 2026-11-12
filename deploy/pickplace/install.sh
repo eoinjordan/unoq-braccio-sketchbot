@@ -17,7 +17,7 @@ fi
 mkdir -p "$HOME/.config/systemd/user" "$HOME/.config/sketchbot" "$HOME/bin"
 install -m 0644 "$here/deploy/pickplace/sketchbot-pickplace.service" "$HOME/.config/systemd/user/"
 [[ -e "$HOME/.config/sketchbot/pickplace.env" ]] \
-  || install -m 0644 "$here/deploy/pickplace/pickplace.env" "$HOME/.config/sketchbot/"
+  || install -m 0644 "$here/deploy/pickplace/pickplace-options.conf" "$HOME/.config/sketchbot/pickplace.env"
 install -m 0755 "$here/deploy/pickplace/sketchbot-mode" "$HOME/bin/"
 install -m 0755 "$here/deploy/pickplace/pickplace-kiosk.sh" "$HOME/bin/"
 systemctl --user daemon-reload

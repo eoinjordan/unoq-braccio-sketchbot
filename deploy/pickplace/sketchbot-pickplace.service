@@ -13,7 +13,7 @@ Type=notify
 NotifyAccess=main
 WorkingDirectory=%h/sketchbot-pickplace
 Environment=PYTHONUNBUFFERED=1
-# PICKPLACE_ARGS: see pickplace.env. Without --live every session is a dry run.
+# PICKPLACE_ARGS: see ~/.config/sketchbot/pickplace.env. Without --live every session is a dry run.
 EnvironmentFile=-%h/.config/sketchbot/pickplace.env
 ExecStart=%h/sketchbot-pickplace/.venv/bin/python -u -m sketch_artist.pick_place_service $PICKPLACE_ARGS
 # The service reports to systemd once a second. If it hangs for this long it
