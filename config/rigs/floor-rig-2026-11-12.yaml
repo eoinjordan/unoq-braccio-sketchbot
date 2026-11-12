@@ -1,40 +1,52 @@
-# Pick-and-place values for the floor rig with the short printed fingers and
-# the XIAO round-display holder, as it stood on 2026-11-12. Copy the
-# pick_place block into config/runtime.yaml on the board to use it.
+# Pick-and-place values for the floor rig (LEGO bricks, short printed
+# fingers, XIAO round-display holder on top of the gripper), as it stood at
+# the end of 2026-11-12. Copy the pick_place block into config/runtime.yaml
+# on the board to use it with sketch_artist.pick_place_service.
 #
-# Read docs/pick-place-service.md, "What was measured", before trusting any
-# of it. Nothing here was measured with a ruler. "photo" means read off an
-# overhead camera frame of the arm held level; "assumed" means nobody
-# measured it at all. Live motion must stay off until the values marked
-# assumed have been measured and the photo values checked.
+# Status: no brick has been picked on this rig. The service runs these
+# values in dry-run only. Do not add --live to the service options until a
+# single pick has been made by hand with sketch_artist.pickplace_overhead.live
+# and watched. See docs/pick-place-service.md.
+#
+# Sources: "studio" = the owner's grabber bench settings in the Studio's
+# config/runtime.yaml (tool 100 mm, pitch -55, jaws 10 open and 65 closed,
+# base height 92); "run" = what the hand-driven run on 2026-11-12 used and
+# saw; "assumed" = not measured.
 pick_place:
   arm:
-    # The bricks and bin sit on the side the folded gripper points to.
+    # run: the bricks and the bin lie on the side the folded gripper points
+    # to, so the arm leans over its shoulder.
     reach_behind: true
-    # photo 2026-11-12: with the jaws closed the gripper continues the
-    # forearm's line to within about 10 degrees at wrist servo 90.
-    wrist_zero_deg: 90.0
+    wrist_zero_deg: 90.0           # studio servo calibration
   tool:
-    # photo 2026-11-12: fingertips about 105 mm (plus or minus 15) from the
-    # wrist pitch axis. The split between the three numbers is assumed.
+    # studio: 100 mm from the wrist pitch axis to the grasp point.
     mount_from_wrist_mm: 45.0
     grasp_from_mount_mm: 55.0
-    tip_from_mount_mm: 60.0
-    # photo 2026-11-12: at wrist roll servo 90, reaching behind, the round
-    # display faces up, so the holder is on the outer face. 90 in this file
-    # is 90 at the servo (the half turn of reach_behind leaves 90 alone).
-    wrist_rotation_deg: 90.0
+    tip_from_mount_mm: 60.0        # assumed
+    wrist_rotation_deg: 90.0       # run: camera on top at roll 90
   gripper:
-    # photo 2026-11-12: about 45 mm between the fingertips at servo 10 and
-    # closed at servo 60. Rough; measure with calipers.
+    # studio: open 10, closed 65. Gap at servo 10 about 45 mm (run, read off
+    # the overhead camera); the closed end is assumed.
     jaw_calibration:
       - {deg: 10.0, width_mm: 45.0}
-      - {deg: 60.0, width_mm: 3.0}
+      - {deg: 65.0, width_mm: 3.0}
     open_width_mm: 44.0
   bin:
-    # assumed: nobody gave the wall height. 110 is taller than any bin of
-    # this footprint is likely to be.
-    rim_height_mm: 110.0
-  # Not set here because not measured: desk.z_mm (floor height in the arm
-  # frame), camera.* (holder geometry, picture rotation, field of view),
-  # bin.fallback_xy_mm, search range.
+    rim_height_mm: 110.0           # assumed
+  search:
+    # run: the base turned 10 to 149 without trouble, but at 149 the camera
+    # holder passed within a few centimetres of a chair leg. Keep the sweep
+    # inside what is clear on the day.
+    base_min_deg: 30.0
+    base_max_deg: 140.0
+  # Hand-driven numbers from the run (base servo, reach and height in the
+  # Studio model, mm), kept here as a record, not read by the code:
+  #   base axis on the floor in the overhead picture: about (815, 450) px;
+  #   picture angle turns about 1.0 degree per base servo degree once the
+  #   base was fixed (it was 0.5 to 0.75 while the base slid);
+  #   base 107, reach 200, height 90: claws seen about 230 px from the axis,
+  #     so roughly 1.15 px per model mm at that reach;
+  #   descent at base 149, reach 204: 90, 70, 55, 45, 35, 25, 15, 8 mm with
+  #     jaws at 10, then closed 35, 50, 65 and lifted. The claws came down on
+  #     the near side of the 2x2 brick, not around it, and pushed it about
+  #     8 mm outward. Nothing was gripped.
