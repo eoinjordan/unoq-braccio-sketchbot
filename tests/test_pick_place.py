@@ -129,7 +129,7 @@ def test_field_of_view_is_66_degrees_on_the_diagonal():
 def test_optical_axis_meets_the_centre_line_at_the_pick_distance(
         camera, workspace_cfg, settings):
     """The default XIAO holder is aimed 120 mm in front of the finger mount:
-    tilt 13.3 degrees, lens 22.8 mm up and 23.1 mm forward."""
+    tilt 14.6 degrees, lens 23.7 mm up and 29.0 mm forward."""
     angles = search_angles(workspace_cfg, settings)
     pose = camera.pose(angles)
     ahead = 120.0 - settings["tool"]["grasp_from_mount_mm"]
@@ -149,7 +149,7 @@ def test_camera_sits_on_the_outer_face_and_looks_down(camera, workspace_cfg, set
     assert math.hypot(pose.lens[0], pose.lens[1]) > math.hypot(*pose.grasp[:2]) - 20
     assert pose.lens[2] > pose.grasp[2] + 30
     elevation = math.degrees(math.asin(pose.forward[2]))
-    assert elevation == pytest.approx(-73.3, abs=0.3)      # -60 less the tilt
+    assert elevation == pytest.approx(-74.6, abs=0.3)      # -60 less the tilt
     assert abs(pose.jaw[2]) < 1e-6                         # claws close sideways
 
 

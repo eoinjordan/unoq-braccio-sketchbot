@@ -193,12 +193,12 @@ def render():
       <div class="parts-scroll"><table class="parts-table">
         <thead><tr><th>Holder</th><th>Aimed in front of the finger mount</th><th>Tilt</th><th>Lens above the gripper centre line</th><th>Closed claws cover</th></tr></thead>
         <tbody>
-          <tr><td>{link("pencil-grip", XIAO + "_near.stl")}</td><td>90 mm</td><td>17.7 deg</td><td>20.8 mm</td><td>20 percent of the picture</td></tr>
-          <tr><td>{link("pencil-grip", XIAO + ".stl")}</td><td>120 mm</td><td>13.5 deg</td><td>22.7 mm</td><td>13 percent</td></tr>
-          <tr><td>{link("pencil-grip", XIAO + "_far.stl")}</td><td>180 mm</td><td>9.1 deg</td><td>24.8 mm</td><td>8 percent</td></tr>
-          <tr><td>{link("pencil-grip", EYE + "_near.stl")}</td><td>90 mm</td><td>11.5 deg</td><td>16.4 mm</td><td>29 percent</td></tr>
-          <tr><td>{link("pencil-grip", EYE + ".stl")}</td><td>120 mm</td><td>8.7 deg</td><td>16.9 mm</td><td>21 percent</td></tr>
-          <tr><td>{link("pencil-grip", EYE + "_far.stl")}</td><td>180 mm</td><td>5.8 deg</td><td>17.5 mm</td><td>14 percent</td></tr>
+          <tr><td>{link("pencil-grip", XIAO + "_near.stl")}</td><td>90 mm</td><td>19.3 deg</td><td>21.6 mm</td><td>20 percent of the picture</td></tr>
+          <tr><td>{link("pencil-grip", XIAO + ".stl")}</td><td>120 mm</td><td>14.6 deg</td><td>23.7 mm</td><td>13 percent</td></tr>
+          <tr><td>{link("pencil-grip", XIAO + "_far.stl")}</td><td>180 mm</td><td>9.8 deg</td><td>25.9 mm</td><td>7 percent</td></tr>
+          <tr><td>{link("pencil-grip", EYE + "_near.stl")}</td><td>90 mm</td><td>12.4 deg</td><td>17.8 mm</td><td>27 percent</td></tr>
+          <tr><td>{link("pencil-grip", EYE + ".stl")}</td><td>120 mm</td><td>9.4 deg</td><td>18.3 mm</td><td>19 percent</td></tr>
+          <tr><td>{link("pencil-grip", EYE + "_far.stl")}</td><td>180 mm</td><td>6.3 deg</td><td>18.9 mm</td><td>13 percent</td></tr>
         </tbody>
       </table></div>
       <p>The claw tips are 61.4 mm in front of the finger mount, so the default aims 59 mm past them. Open and half-open claws are outside the picture; the cover figures are for claws fully closed, measured on the model's flat 101 mm blades with a 66 degree lens.</p>
@@ -225,7 +225,8 @@ def render():
             <li>Servo body length and width, and how far it stands above the face: <code>servo_slot_length</code>, <code>servo_slot_width</code>, <code>servo_stand_height</code>. The defaults are the SR311's 31.3 x 16.5 x 28.6 mm with margin.</li>
             <li>Finger pivots to the middle of the servo: <code>servo_from_pivots</code>.</li>
           </ol>
-          <p>The servo sits in an open-ended slot cut through the pad and one jaw, so its body, horn and lead are in the open and the lead leaves by the open end.</p>
+          <p>The servo sits in an open-ended slot cut through the pad and one jaw, so its body, horn and lead are in the open and the lead leaves by the open end. The slot is on the right-hand edge, seen from behind the gripper looking along the fingers with the camera on top; <code>servo_side</code> turns it to the left.</p>
+          <p>After a test fit of a printed saddle on the gripper, the opening between the jaws was widened by 2 mm each side and the servo slot moved to the right-hand edge. The tie tunnel is now 5.0 x 2.6 mm with flared mouths, and every exported part is checked for a clear passage through it.</p>
         </div>
         <div>
           <h3>Print</h3>

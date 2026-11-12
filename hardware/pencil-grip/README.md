@@ -115,14 +115,23 @@ z = 21.5 mm the pad is a bridge that passes over the finger bases.
   lead all sit in the open, and the lead leaves through the open end. The
   defaults are the SR311's published body (31.3 x 16.5 x 28.6 mm, from
   <https://store-usa.arduino.cc/products/tinkerkit-braccio-robot>) with
-  margin: 42 mm long, 21 mm wide, centred 17.5 mm behind the finger pivots,
-  and nothing is built over it below 30 mm. `servo_side` turns the slot to
-  the other edge.
-- *Cable tie.* One tunnel, 4.4 x 2.0 mm, for a 2.5 mm or a 3.6 mm tie, in the
-  strip of pad between the servo slot and the finger pivots. The tie goes
-  round the block there and never crosses the servo, its horn or the finger
-  linkage. A second tunnel appears behind the slot if `servo_from_pivots`
-  leaves room for one; with the defaults it does not.
+  margin: 42 mm long, 21 mm wide, centred 18 mm behind the finger pivots,
+  and nothing is built over it below 30 mm. The slot is open to the
+  **right-hand edge, seen from behind the gripper looking along the fingers
+  with the camera on top**. That side comes from a test fit on the owner's
+  gripper; the first version had it on the left. `servo_side = 1` turns it
+  back to the left.
+- *Cable tie.* One tunnel, **5.0 x 2.6 mm**, for a 2.5 mm or a 3.6 mm tie
+  (3.6 x 1.4 mm with 0.7 mm each side and 0.6 mm above and below), in the
+  strip of pad between the servo slot and the finger pivots. It runs straight
+  through from one side face of the pad to the other, has at least 1.2 mm of
+  material all round and flares by 1.5 mm at both mouths so a tie feeds in.
+  The tie goes round the block there and never crosses the servo, its horn or
+  the finger linkage. A second tunnel appears behind the slot if
+  `servo_from_pivots` leaves room for one; with the defaults it does not.
+  `scripts/check_tie_tunnels.py` probes every exported STL for a clear
+  passage, and `tests/test_tie_tunnels.py` fails if one is blocked. The first
+  version's tunnel was 4.4 x 2.0 mm with a 0.7 mm floor.
 - *Screws.* Two slots through the pad for M3 screws. **None of the references
   these parts are drawn from shows a fixing point on the gripper block**, so
   the slot positions are placeholders. Measure two holes or studs on your
@@ -132,7 +141,11 @@ z = 21.5 mm the pad is a bridge that passes over the finger bases.
 the Braccio gripper was found; Arduino's store page gives only the arm's
 overall sizes. The block's numbers are read off
 `../braccio-arm/braccio_wrist_roll.stl`, a simulation mesh that draws the
-whole block as a 4.5 mm plate with a round hole where the servo goes.
+whole block as a 4.5 mm plate with a round hole where the servo goes. Two of
+the defaults were then changed after a test fit of a printed saddle on the
+owner's gripper: the opening between the jaws is 2 mm wider each side
+(`block_half_width` 20.8 to 22.8, the jaws moved out, not thinned), and the
+servo slot is on the other edge. Nothing else here has been fitted.
 
 | Measure | Set |
 | --- | --- |
@@ -141,7 +154,7 @@ whole block as a 4.5 mm plate with a round hole where the servo goes.
 | Servo body length and width, and how far it stands above the face | `servo_slot_length`, `servo_slot_width`, `servo_stand_height` |
 | Finger pivots to the middle of the servo | `servo_from_pivots` |
 
-Then print `braccio_gripper_saddle_fit_test.stl` (80 x 12 x 25 mm as it
+Then print `braccio_gripper_saddle_fit_test.stl` (85 x 13 x 26 mm as it
 prints, standing on its front end): the saddle alone, with the slot, the tie
 tunnel and the screw slots but no camera. Try it on the gripper, open and
 close the claws under it, and thread a tie through, before printing a holder.
@@ -196,12 +209,12 @@ low as each board allows. The tilt follows.
 
 | File | `pick_distance` | Past the closed claws | Tilt | Lens above the centre line | Lens in front of the finger mount |
 | --- | --- | --- | --- | --- | --- |
-| `braccio_gripper_xiao_round_display_near.stl` | 90 mm | 29 mm | 17.7 deg | 20.8 mm | 24.6 mm |
-| `braccio_gripper_xiao_round_display.stl` | 120 mm | 59 mm | 13.5 deg | 22.7 mm | 25.1 mm |
-| `braccio_gripper_xiao_round_display_far.stl` | 180 mm | 119 mm | 9.1 deg | 24.8 mm | 25.5 mm |
-| `braccio_gripper_esp_eye_near.stl` | 90 mm | 29 mm | 11.5 deg | 16.4 mm | 9.1 mm |
-| `braccio_gripper_esp_eye.stl` | 120 mm | 59 mm | 8.7 deg | 16.9 mm | 9.2 mm |
-| `braccio_gripper_esp_eye_far.stl` | 180 mm | 119 mm | 5.8 deg | 17.5 mm | 9.2 mm |
+| `braccio_gripper_xiao_round_display_near.stl` | 90 mm | 29 mm | 19.3 deg | 21.6 mm | 28.3 mm |
+| `braccio_gripper_xiao_round_display.stl` | 120 mm | 59 mm | 14.6 deg | 23.7 mm | 29.0 mm |
+| `braccio_gripper_xiao_round_display_far.stl` | 180 mm | 119 mm | 9.8 deg | 25.9 mm | 29.5 mm |
+| `braccio_gripper_esp_eye_near.stl` | 90 mm | 29 mm | 12.4 deg | 17.8 mm | 9.1 mm |
+| `braccio_gripper_esp_eye.stl` | 120 mm | 59 mm | 9.4 deg | 18.3 mm | 9.2 mm |
+| `braccio_gripper_esp_eye_far.stl` | 180 mm | 119 mm | 6.3 deg | 18.9 mm | 9.2 mm |
 
 The XIAO's camera is 15 mm off the centre of the display, towards the USB-C
 end. To keep the lens on the plane of symmetry the display sits 15 mm to one
@@ -225,9 +238,11 @@ braccio_gripper_esp_eye.scad`.
 | ESP-EYE lens from the USB edge, barrel, module, buttons | 29.5, 7 x 6.5, 3.3, 26.0 | `braccio_camera_finger.scad` (measured there off `docs/images/esp-eye.png`) |
 | Finger mounting face above the roll frame origin | 30.0 | URDF |
 | Claw tips in front of the mounting face | 61.4 | `braccio_grip_lib.scad` |
-| Gripper block: face, thickness, half width, taper | y -1.5, 4.5, 20.8 at z 3.1, 0.612 per mm | `../braccio-arm/braccio_wrist_roll.stl` |
+| Gripper block: face, thickness, taper | y -1.5, 4.5, 0.612 per mm | `../braccio-arm/braccio_wrist_roll.stl` |
+| Gripper block: half width at z 3.1 | 22.8 | test fit on the owner's gripper (the mesh gives 20.8) |
+| Gripper servo side | right-hand edge, seen from behind | test fit on the owner's gripper |
 | Gripper servo (SR311) body | 31.3 x 16.5 x 28.6 | Arduino store page; slot defaults add margin |
-| Servo position: pivots to the middle of the slot | 17.5 | **Estimate** (the mesh's hole is 15.0 behind the pivots) |
+| Servo position: pivots to the middle of the slot | 18.0 | **Estimate** (the mesh's hole is 15.0 behind the pivots) |
 | LiPo cell for the cover | 4.0 x 20 x 30 (402030) | **Default, not a measurement**: set to your cell |
 | Tallest part on the back of the display | 3.2 | **Estimate** (RTC cell holder, 2.9 in the board file) |
 | Finger blades: reach back to, stand above the centre line | z 23.5, y 0.7 | `../braccio-arm` gripper meshes, swept open to closed |
@@ -315,14 +330,14 @@ wrist pitch each -90 to 90 degrees. Smallest gap in mm, near / default / far:
 | | XIAO round display | ESP-EYE |
 | --- | --- | --- |
 | Fingers to the holder (and cover) | 1.5 / 1.5 / 1.5 | 1.5 / 1.5 / 1.5 |
-| Fingers to the boards and plug | 5.6 / 6.3 / 6.3 | 5.8 / 5.8 / 6.0 |
+| Fingers to the boards and plug | 6.5 / 7.8 / 7.8 | 7.2 / 7.3 / 7.4 |
 | Fingers to the cable tie | 4.2 / 4.2 / 4.2 | 4.2 / 4.2 / 4.2 |
 | Wrist body to the holder, over roll | 3.0 / 3.0 / 3.0 | 3.0 / 3.0 / 3.0 |
-| Wrist body to the boards and screen, over roll | 21.8 / 23.2 / 24.7 | 26.2 / 26.4 / 26.5 |
+| Wrist body to the boards and screen, over roll | 25.3 / 26.8 / 28.4 | 26.2 / 26.3 / 26.5 |
 | Forearm to the holder, over roll and pitch | 41.6 / 41.6 / 41.6 | 41.6 / 41.6 / 41.6 |
-| Forearm to the boards and screen, over roll and pitch | 60.5 / 61.8 / 63.3 | 64.8 / 65.0 / 65.2 |
-| Pen finger on the other face of the gripper | 2.9 / 2.9 / 2.9 | 14.1 / 14.1 / 14.1 |
-| Share of the picture closed claws cover | 0.20 / 0.13 / 0.08 | 0.29 / 0.21 / 0.14 |
+| Forearm to the boards and screen, over roll and pitch | 64.0 / 65.5 / 67.1 | 64.8 / 65.0 / 65.1 |
+| Pen finger on the other face of the gripper | 2.9 / 2.9 / 3.2 | 14.2 / 14.1 / 14.1 |
+| Share of the picture closed claws cover | 0.20 / 0.13 / 0.07 | 0.27 / 0.19 / 0.13 |
 
 The round display column is with the cover and a 402030 cell fitted.
 
@@ -341,6 +356,11 @@ How to read it:
   face. Put the camera on the other one.
 - The reference has no gripper servo, horn or lead, so the check cannot speak
   for them. That is what the servo slot and the saddle fit piece are for.
+- With the servo slot on the right, the servo stands behind the lower part of
+  the round display, which sits 15 mm to the right of centre. They do not
+  touch (the slot ends 3 mm behind the foot of the ring), but a servo that
+  stands tall will hide the bottom of the screen from behind. Raise
+  `camera_height` if it does.
 
 **Software.** `firmware/esp_eye_camera` serves the ESP-EYE to the Studio over
 HTTP or USB serial. It does not run on a XIAO ESP32S3 Sense as it stands.
