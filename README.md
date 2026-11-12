@@ -158,10 +158,13 @@ along the fingers at the point the claws are about to close on. One takes an
 ESP-EYE (`hardware/pencil-grip/braccio_gripper_esp_eye.stl`). The other takes
 a Seeed Studio XIAO ESP32S3 Sense on the Round Display for XIAO
 (`braccio_gripper_xiao_round_display.stl`), with the screen directly behind
-the lens, facing the audience. Each fixes with cable ties round the gripper
+the lens, facing the audience, and a snap-on cover
+(`braccio_gripper_xiao_round_display_cover.stl`) with SKETCHBOT on its face
+and a pocket for a small LiPo. Each fixes with a cable tie round the gripper
 block or with two screws, and comes aimed 120 mm in front of the finger mount
-(`_near` is 90 mm, `_far` is 180 mm). Print the `_fit_test` piece first, and
-measure the gripper block: the saddle is drawn from a simulation mesh. Steps
+(`_near` is 90 mm, `_far` is 180 mm). Measure the gripper block and its servo
+first, and print `braccio_gripper_saddle_fit_test.stl` and the `_fit_test`
+pieces before a holder: the saddle is drawn from a simulation mesh. Steps
 are in [hardware/pencil-grip/README.md](hardware/pencil-grip/README.md#cameras-on-top-of-the-gripper)
 and on the [parts page](https://eoinjordan.github.io/unoq-braccio-sketchbot/parts.html#holder).
 The ESP-EYE works with the Studio through `firmware/esp_eye_camera`. The round

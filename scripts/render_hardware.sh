@@ -60,6 +60,18 @@ for camera in xiao_round_display esp_eye; do
     "$python" "$here/scripts/mesh_check.py" --binary "$parts/$holder.stl" "$parts/${holder}_near.stl" "$parts/${holder}_far.stl" "$parts/${holder}_fit_test.stl"
 done
 
+holder="braccio_gripper_xiao_round_display"
+echo "Rendering the round display cover: one per aim distance, and its fit piece"
+"$openscad_bin" -o "$parts/${holder}_cover.stl" -D 'part="cover"' "$parts/$holder.scad"
+"$openscad_bin" -o "$parts/${holder}_near_cover.stl" -D 'part="cover"' -D pick_distance=90 "$parts/$holder.scad"
+"$openscad_bin" -o "$parts/${holder}_far_cover.stl" -D 'part="cover"' -D pick_distance=180 "$parts/$holder.scad"
+"$openscad_bin" -o "$parts/${holder}_cover_fit_test.stl" -D 'part="cover_fit_test"' "$parts/$holder.scad"
+"$openscad_bin" -o "$parts/${holder}_cover_preview.png" --render --imgsize=1400,1050 --colorscheme=Tomorrow --camera=0,0,25,28,0,15,170 -D 'part="cover"' -D 'pose="cradle"' "$parts/$holder.scad"
+"$openscad_bin" -o "$arm/gripper_xiao_round_display_front.png" --imgsize=1400,1050 --colorscheme=Tomorrow --camera=0,-30,12,66,0,20,340 "$arm/gripper_cameras_on_gripper.scad"
+echo "Rendering the saddle fit piece"
+"$openscad_bin" -o "$parts/braccio_gripper_saddle_fit_test.stl" "$parts/braccio_gripper_saddle_fit_test.scad"
+"$python" "$here/scripts/mesh_check.py" --binary "$parts/${holder}_cover.stl" "$parts/${holder}_near_cover.stl" "$parts/${holder}_far_cover.stl" "$parts/${holder}_cover_fit_test.stl" "$parts/braccio_gripper_saddle_fit_test.stl"
+
 echo "Converting to binary STL, writing OBJ copies, validating every part"
 "$python" "$here/scripts/mesh_check.py" --binary --write-obj \
     "$parts/braccio_pencil_grip_8mm.stl" \

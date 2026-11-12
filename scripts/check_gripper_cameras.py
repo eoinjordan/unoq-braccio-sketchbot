@@ -3,7 +3,8 @@
 
 The two holders (hardware/pencil-grip/braccio_gripper_xiao_round_display.scad
 and braccio_gripper_esp_eye.scad) sit on top of the gripper block and look
-forward along the fingers. This exports each from OpenSCAD where it sits,
+forward along the fingers. The round display holder is checked with its cover
+and battery fitted. This exports each from OpenSCAD where it sits,
 places the reference geometry round it with the joint frames of
 sim/gazebo/urdf/braccio_sketchbot.urdf.xacro, and reports the smallest gap to
 each neighbour over the joint ranges, and how much of the camera's view the
@@ -22,8 +23,8 @@ Reference geometry:
 
 The reference draws the gripper block as a 4.5 mm plate and the fingers as two
 flat blades. It has no gripper servo, horn or lead, so nothing here can speak
-for those: the holders keep clear of the hole in the plate where the servo
-goes, and that is all.
+for those: the saddle leaves an open slot for the servo, sized by parameters
+the owner measures, and that is all.
 
 Needs numpy and manifold3d, and OpenSCAD on the PATH (or --openscad). It is a
 bench tool, not part of the test suite.
@@ -231,6 +232,11 @@ def check(openscad, meshes, name, pick, workdir):
                         "left_gripper", "right_gripper")}
     holder, info = export(openscad, workdir, name, pick, "holder")
     boards, _ = export(openscad, workdir, name, pick, "electronics")
+    cover = None
+    if name == "xiao_round_display":
+        # The cover and the battery inside it are checked as part of the holder.
+        cover, _ = export(openscad, workdir, name, pick, "cover")
+        holder = holder + cover
     base = moved(ref["wrist_roll"], gripper_base())
     grips = sweep(GRIP_RANGE, 7)
     rolls = sweep(ROLL_RANGE, 13)
@@ -298,8 +304,20 @@ def check(openscad, meshes, name, pick, workdir):
         view[f"claws {label}: line to the pick point"] = (
             "blocked" if blocked else "clear")
     fixed = triangles(holder + base)
-    view["holder and gripper block: share of the picture covered"] = \
+    view["holder, cover and gripper block: share of the picture covered"] = \
         round(float(rays_hit(lens, rays, fixed).mean()), 3)
+    if cover is not None:
+        # Edges of the lens window, as [radius, distance in front of the lens
+        # tip]: the bore of the collar and the outer rim of the chamfer.
+        r_in, z_in, r_out, z_out = info["window"]
+        half = info["fov_deg"] / 2
+        barrel = 3.5
+        view["lens window: margin beyond the picture's corner, degrees"] = round(
+            min(math.degrees(math.atan2(r_in, z_in)),
+                math.degrees(math.atan2(r_out, z_out))) - half, 1)
+        view["lens window: the same from the rim of the barrel, degrees"] = round(
+            min(math.degrees(math.atan2(r_in - barrel, z_in)),
+                math.degrees(math.atan2(r_out - barrel, z_out))) - half, 1)
     report["view"] = view
     return report
 

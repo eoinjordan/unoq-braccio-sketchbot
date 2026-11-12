@@ -24,7 +24,7 @@ Seven STL meshes of the Braccio arm, copied unmodified from
 (article: <https://opus.stedden.org/2020/08/braccio-moveit-gazebo/>). They are
 simulation visual meshes in millimetres.
 
-The folder also holds `gripper_cameras_on_gripper.scad` and the four pictures
+The folder also holds `gripper_cameras_on_gripper.scad` and the five pictures
 rendered from it. They show the camera holders on those meshes, so they are
 kept with them under GPL-3.0.
 

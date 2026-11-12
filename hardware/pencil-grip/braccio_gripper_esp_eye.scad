@@ -90,7 +90,7 @@ button_relief = 6.0;
 
 // ------------------------------------------------- height and setback
 camera_height = 18.5;       // optical axis above the centre line at the frame
-face_z = 27;                // back of the frame, along the gripper
+face_z = 29;                // back of the frame, along the gripper
 
 // ------------------------------------------------------------------ derived
 // Frame coordinates: lens at the origin, x across the board, y up the board
@@ -257,7 +257,7 @@ echo(str("gripper_camera {",
     ", \"axis\": ", optical_dir(),
     ", \"lens\": ", holder_origin() + lens_w() * optical_dir(),
     ", \"fov_deg\": ", camera_fov_deg,
-    ", \"ties\": ", ties,
+    ", \"ties\": ", ties(),
     ", \"tie_tunnel\": ", [tie_tunnel_width, tie_tunnel_thick],
     ", \"block\": ", [block_centre_x, block_half_width, block_ref_z,
                       block_taper, block_top_y, block_thickness, jaw_fit + jaw],
