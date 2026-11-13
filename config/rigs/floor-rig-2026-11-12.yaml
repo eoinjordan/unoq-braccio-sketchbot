@@ -33,6 +33,13 @@ pick_place:
     open_width_mm: 44.0
   bin:
     rim_height_mm: 110.0           # assumed
+    release_clearance_mm: 20.0
+    # run: the bin is dropped into at a fixed pose. Estimated from the
+    # overhead camera on 2026-11-12 (base servo about 56, about 231 mm out,
+    # behind the base); not checked by a drop. The gripper camera's bin
+    # detection is not used: it reported the charging USB lead's glow as
+    # the bin.
+    fallback_xy_mm: [191.5, -129.2]
   search:
     # run: the base turned 10 to 149 without trouble, but at 149 the camera
     # holder passed within a few centimetres of a chair leg. Keep the sweep

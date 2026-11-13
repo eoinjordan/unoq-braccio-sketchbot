@@ -16,6 +16,7 @@ the whole move is a few degrees. The base turns only with the arm folded.
     ... step 149 204 70 45 25 8    # descend at the same base and reach
     ... jaws 35 50 65              # close in steps
     ... step 149 204 25 45 70      # lift
+    ... place                  # carry to the fixed bin pose in the rig file, open
     ... fold | park | axis
 
 None of this is a pick-and-place program: it does exactly the moves it is
@@ -36,6 +37,7 @@ import numpy as np
 
 from .. import config as cfg
 from ..kinematics import BraccioKinematics
+from ..detections import BIN_LABEL, BRICK_LABELS, Frame, parse_det_line
 from ..mirrored_arm import mirror
 from .geometry import REST_POSE, interpolate
 from .rig import Halt
@@ -208,6 +210,53 @@ def fit_circle(points) -> Tuple[float, float, float]:
     return float(cx), float(cy), float(math.sqrt(c + cx * cx + cy * cy))
 
 
+def bin_pose(rig_settings: dict) -> Tuple[float, float, float]:
+    """(base servo, reach, height) of the fixed drop pose over the bin.
+
+    Taken from ``bin.fallback_xy_mm`` and the rim height plus clearance in
+    the rig's pick_place settings. The x, y there are in the controller's
+    forward frame; through the mirror the same base servo angle and reach
+    put the drop point behind the base, which is where this driver works.
+    The gripper camera is not used to find the bin at all: on the floor rig
+    it reported the glow of the charging USB lead on the gripper as the bin.
+    """
+    b = rig_settings["bin"]
+    x, y = (float(v) for v in b["fallback_xy_mm"])
+    base = 90.0 + math.degrees(math.atan2(y, x))
+    reach = math.hypot(x, y)
+    z = float(b["rim_height_mm"]) + float(b["release_clearance_mm"])
+    return round(base, 1), round(reach, 1), z
+
+
+def bricks_only(frame: Optional[Frame], log=None) -> list:
+    """Brick detections from a gripper-camera frame; anything labelled bin
+    is dropped, and noted in the log when a log is given."""
+    if frame is None:
+        return []
+    kept, dropped = [], []
+    for d in frame.detections:
+        if d.label in BRICK_LABELS:
+            kept.append(d)
+        elif d.label == BIN_LABEL:
+            dropped.append(d)
+    if dropped and log is not None:
+        log("gripper camera: ignored %d bin detection(s), the bin pose is fixed (%s)"
+            % (len(dropped), ", ".join("%.2f,%.2f c%.2f" % (d.x, d.y, d.confidence) for d in dropped)))
+    return sorted(kept, key=lambda d: -d.confidence)
+
+
+def load_rig(path: str) -> dict:
+    """The pick_place block of a rig file, merged over the defaults and checked."""
+    import copy
+    import yaml
+    from ..pick_place import DEFAULTS, validate_settings
+    with open(path, encoding="utf-8") as fh:
+        rig = (yaml.safe_load(fh) or {}).get("pick_place") or {}
+    settings = cfg.merge_config(copy.deepcopy(DEFAULTS), rig)
+    validate_settings(settings)
+    return settings
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config-dir", required=True, help="the Studio config holding the gripper model")
@@ -216,7 +265,9 @@ def main(argv=None) -> int:
                     '"front_angle_deg": -2, "height_mm": 1000, "nadir_px": [930, 1050], "mirrored": true}',
                     help="rough overhead camera, JSON, used only for the arm silhouette")
     ap.add_argument("--check-sheet", action="store_true")
-    ap.add_argument("command", choices=["hover", "step", "jaws", "fold", "park", "axis"])
+    ap.add_argument("--rig", default="config/rigs/floor-rig-2026-11-12.yaml",
+                    help="rig file holding the fixed bin pose (bin.fallback_xy_mm)")
+    ap.add_argument("command", choices=["hover", "step", "jaws", "fold", "park", "axis", "place"])
     ap.add_argument("values", nargs="*", type=float)
     args = ap.parse_args(argv)
     import json
@@ -239,6 +290,17 @@ def main(argv=None) -> int:
         elif args.command == "jaws":
             for value in v:
                 live.jaws(value, "jaws %g" % value)
+        elif args.command == "place":
+            # Carry folded, turn, reach out over the bin at the fixed pose,
+            # open, fold. Never lower than the rim plus clearance.
+            base, reach, z = bin_pose(load_rig(args.rig))
+            live.log("bin pose from %s: base %g reach %g z %g" % (args.rig, base, reach, z))
+            if not live.folded():
+                live.fold()
+            live.turn(base)
+            live.to_height(base, reach, z, "over the bin")
+            live.jaws(live.model.open, "release")
+            live.fold()
         elif args.command == "fold":
             live.fold()
         elif args.command == "park":
